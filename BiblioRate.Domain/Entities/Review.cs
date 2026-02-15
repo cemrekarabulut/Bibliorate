@@ -8,15 +8,15 @@ namespace BiblioRate.Domain.Entities
 {
     public class Review
     {
-    [Key]
-     public int ReviewId { get; set; } // SQL: review_id 
-    public int UserId { get; set; } // Foreign Key 
-    public int BookId { get; set; } // Foreign Key 
-    public string Comment { get; set; } // SQL: comment (TEXT) 
-    public DateTime CreatedAt { get; set; } = DateTime.Now; // SQL: created_at
+        [Key]
+        public int ReviewId { get; set; }
+        public int UserId { get; set; }
+        public int BookId { get; set; }
+        public string Comment { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-    // Navigation Properties (İlişkili Nesneler)
-    public User User { get; set; }
-    public Book Book { get; set; }   
+        // Navigation Properties - Nullable yaparak validation hatasını önlüyoruz
+        public User? User { get; set; }
+        public Book? Book { get; set; }   
     }
 }
