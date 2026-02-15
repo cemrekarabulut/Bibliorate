@@ -14,11 +14,15 @@ public class BooksController : ControllerBase
 {
     private readonly IBookRepository _bookRepository;
     private readonly IGoogleBooksService _googleBooksService;
+    private readonly IBookViewRepository _viewRepository; // Yeni eklenen view repository
 
-    public BooksController(IBookRepository bookRepository, IGoogleBooksService googleBooksService)
+    public BooksController(IBookRepository bookRepository, 
+                           IGoogleBooksService googleBooksService,
+                           IBookViewRepository viewRepository) // Constructor injection
     {
         _bookRepository = bookRepository;
         _googleBooksService = googleBooksService;
+        _viewRepository = viewRepository;
     }
 
     // 1. Tüm yerel kitapları listeleme (MySQL)
@@ -29,7 +33,25 @@ public class BooksController : ControllerBase
         return Ok(books);
     }
 
-    // 2. Hibrit Arama: Hem MySQL hem Google Books
+    // 2. TEKİL KİTAP GETİRME VE LOGLAMA (Berra'nın Analizleri İçin Kritik)
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetBookById(int id, int? userId = null)
+    {
+        var book = await _bookRepository.GetByIdAsync(id);
+        if (book == null) return NotFound("Kitap bulunamadı.");
+
+        // Kitap her görüntülendiğinde Berra'nın analiz edebilmesi için kayıt atıyoruz
+        await _viewRepository.AddViewAsync(new BookView 
+        { 
+            BookId = id, 
+            UserId = userId,
+            ViewedAt = DateTime.Now 
+        });
+
+        return Ok(book);
+    }
+
+    // 3. Hibrit Arama: Hem MySQL hem Google Books
     [HttpGet("search")]
     public async Task<IActionResult> Search(string q, int? userId = null)
     {
@@ -58,7 +80,7 @@ public class BooksController : ControllerBase
         return Ok(result);
     }
 
-    // 3. Kitap Kaydetme: Google'dan gelen veriyi yerel DB'ye alır
+    // 4. Kitap Kaydetme: Google'dan gelen veriyi yerel DB'ye alır
     [HttpPost]
     public async Task<IActionResult> CreateBook([FromBody] Book book)
     {
@@ -66,9 +88,7 @@ public class BooksController : ControllerBase
 
         try 
         {
-            // BookId'yi 0 set ediyoruz ki veritabanı otomatik (Auto Increment) atasın
             book.BookId = 0; 
-            
             await _bookRepository.AddBookAsync(book);
             return Ok(new { message = "Kitap başarıyla MySQL veritabanına kaydedildi!", bookId = book.BookId });
         }
