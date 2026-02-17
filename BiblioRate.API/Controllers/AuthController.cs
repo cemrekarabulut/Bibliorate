@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using BiblioRate.Application.Interfaces;
 using BiblioRate.Domain.Entities;
+using BiblioRate.Domain.Models; // Yeni eklediğimiz DTO'yu kullanmak için
 using BCrypt.Net;
 
 namespace BiblioRate.API.Controllers;
@@ -30,7 +31,16 @@ public class AuthController : ControllerBase
         try
         {
             await _userRepository.AddUserAsync(user);
-            return Ok(new { message = "Kayıt başarıyla tamamlandı!", userId = user.UserId });
+
+            // Çağlar'ın frontend'i için uyumlu DTO'yu hazırlıyoruz
+            var response = new AuthResponseDto
+            {
+                UserId = user.UserId.ToString(),
+                Username = user.Username,
+                Email = user.Email
+            };
+
+            return Ok(new { message = "Kayıt başarıyla tamamlandı!", user = response });
         }
         catch (Exception ex)
         {
@@ -49,16 +59,19 @@ public class AuthController : ControllerBase
             return Unauthorized("Kullanıcı adı veya şifre hatalı.");
         }
 
-        return Ok(new 
-        { 
-            message = "Giriş başarılı!", 
-            userId = user.UserId, 
-            username = user.Username 
-        });
+        // Giriş başarılı olduğunda Çağlar'ın beklediği "user_id" formatını dönüyoruz
+        var response = new AuthResponseDto
+        {
+            UserId = user.UserId.ToString(),
+            Username = user.Username,
+            Email = user.Email
+        };
+
+        return Ok(response);
     }
 }
 
-// Login isteği için küçük bir yardımcı sınıf (DTO)
+// Login isteği için yardımcı sınıf (Giriş yaparken şifre açık metin gelir)
 public class LoginRequest
 {
     public string Username { get; set; } = string.Empty;

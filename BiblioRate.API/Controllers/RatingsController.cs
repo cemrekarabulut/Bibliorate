@@ -19,12 +19,13 @@ public class RatingsController : ControllerBase
         _ratingRepository = ratingRepository;
     }
 
-    // 1. Bir kitaba puan ver (IMDb tarzı oy kullanma)
     [HttpPost]
     public async Task<IActionResult> AddRating([FromBody] Rating rating)
     {
-        // ÖNEMLİ: Navigation property'leri null yapıyoruz. 
-        // Böylece API, bizden tam bir User veya Book objesi beklemiyor.
+        // Berra'nın anomali tespiti için zaman damgası ekliyoruz
+        rating.CreatedAt = DateTime.Now; 
+        
+        // Frontend'den gelmesi gerekmeyen objeleri null yaparak güvene alıyoruz
         rating.User = null;
         rating.Book = null;
 
@@ -34,7 +35,15 @@ public class RatingsController : ControllerBase
         try
         {
             await _ratingRepository.AddRatingAsync(rating);
-            return Ok(new { message = "Puanınız başarıyla kaydedildi!", ratingId = rating.RatingId });
+            
+            // Çağlar puan verdikten sonra güncel ortalamayı da aynı anda dönebiliriz
+            var newAverage = await _ratingRepository.GetAverageScoreAsync(rating.BookId);
+            
+            return Ok(new { 
+                message = "Puanınız başarıyla kaydedildi!", 
+                ratingId = rating.RatingId,
+                currentAverage = Math.Round(newAverage, 1) // Çağlar'ın UI'ı güncellemesi için kolaylık
+            });
         }
         catch (Exception ex)
         {
@@ -42,15 +51,11 @@ public class RatingsController : ControllerBase
         }
     }
 
-    // 2. Bir kitabın ortalama puanını getir (BiblioRate Puanı)
     [HttpGet("average/{bookId}")]
     public async Task<IActionResult> GetAverageScore(int bookId)
     {
         var average = await _ratingRepository.GetAverageScoreAsync(bookId);
-        
-        // Virgülden sonra iki basamak göstererek daha profesyonel (IMDb gibi) bir görünüm sağlayalım
         var formattedAverage = Math.Round(average, 1);
-        
         return Ok(new { BookId = bookId, AverageScore = formattedAverage });
     }
 }

@@ -1,24 +1,27 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace BiblioRate.Domain.Entities
 {
     public class Book
     {
-        public int BookId { get; set; } // SQL: book_id
-        public string Title { get; set; } // SQL: title
-        public string Author { get; set; } // SQL: author
-        public string Genre { get; set; } = "Genel"; // SQL: genre
-        public int Year { get; set; } // SQL: year
-        public string Description { get; set; } // SQL: description
+        public int BookId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Author { get; set; } = "Bilinmeyen Yazar";
+        public string Genre { get; set; } = "Genel";
+        public int Year { get; set; }
         
-        // Google'dan gelen veriler için ekledik:
+        // Berra'nın analizleri için varsayılan değerler
+        public string Description { get; set; } = "Açıklama bulunmuyor.";
+        public string ThumbnailUrl { get; set; } = string.Empty;
+
+        // Çağlar'ın Import işlemi için benzersiz Google ID'si
+        public string? GoogleBookId { get; set; } 
+
         public string Isbn { get; set; } = "0000000000"; 
         public DateTime PublishedAt { get; set; } = DateTime.Now;
 
-        // İlişkiler (Navigation Properties)
+        // İlişkiler
         public ICollection<Rating> Ratings { get; set; } = new List<Rating>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
         public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();

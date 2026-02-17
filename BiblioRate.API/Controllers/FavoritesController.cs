@@ -1,5 +1,6 @@
 using BiblioRate.Application.Interfaces;
 using BiblioRate.Domain.Entities;
+using BiblioRate.Domain.Models; // BookDto kullanımı için
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,11 +24,10 @@ public class FavoritesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddToFavorites([FromBody] Favorite favorite)
     {
-        // Validation hatasını önlemek için navigation property'leri temizliyoruz
+        // Çağlar'ın gönderdiği verideki isimlendirme çakışmalarını önlemek için temizlik
         favorite.User = null;
         favorite.Book = null;
 
-        // Zaten favoride mi kontrolü
         var exists = await _favoriteRepository.IsFavoriteAsync(favorite.UserId, favorite.BookId);
         if (exists)
             return BadRequest("Bu kitap zaten favorilerinizde.");
@@ -43,17 +43,30 @@ public class FavoritesController : ControllerBase
         }
     }
 
-    // 2. Kullanıcının Tüm Favorilerini Getir
+    // 2. Kullanıcının Tüm Favorilerini Getir (Çağlar'ın Frontend Uyumu İçin DTO'lu)
     [HttpGet("user/{userId}")]
     public async Task<IActionResult> GetUserFavorites(int userId)
     {
         var favorites = await _favoriteRepository.GetUserFavoritesAsync(userId);
-        return Ok(favorites);
+        
+        // Çağlar favori listesini gösterirken 'BookDto' formatında veri bekliyor
+        var favoriteBooks = favorites.Select(f => new BookDto
+        {
+            BookId = f.Book.BookId,
+            Title = f.Book.Title,
+            Authors = !string.IsNullOrEmpty(f.Book.Author) 
+                      ? f.Book.Author.Split(',').Select(a => a.Trim()).ToList() 
+                      : new List<string>(),
+            ThumbnailUrl = f.Book.ThumbnailUrl ?? string.Empty,
+            Description = f.Book.Description
+        });
+
+        return Ok(favoriteBooks);
     }
 
     // 3. Favorilerden Çıkar
     [HttpDelete("remove")]
-    public async Task<IActionResult> RemoveFromFavorites(int userId, int bookId)
+    public async Task<IActionResult> RemoveFromFavorites([FromQuery] int userId, [FromQuery] int bookId)
     {
         await _favoriteRepository.RemoveFromFavoritesAsync(userId, bookId);
         return Ok(new { message = "Kitap favorilerden çıkarıldı." });

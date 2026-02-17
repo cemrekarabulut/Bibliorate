@@ -23,6 +23,9 @@ public class ReviewsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddReview([FromBody] Review review)
     {
+        // Berra'nın duygu analizi (sentiment analysis) yapabilmesi için zaman damgası ekliyoruz
+        review.CreatedAt = DateTime.Now;
+
         // Validation hatasını önlemek için navigation property'leri temizliyoruz
         review.User = null;
         review.Book = null;
@@ -46,10 +49,21 @@ public class ReviewsController : ControllerBase
     public async Task<IActionResult> GetReviewsByBook(int bookId)
     {
         var reviews = await _reviewRepository.GetReviewsByBookIdAsync(bookId);
-        return Ok(reviews);
+
+        // Çağlar'ın frontend'de yorumu yapanın adını ve tarihini şık göstermesi için basit bir projeksiyon yapalım
+        var reviewList = reviews.Select(r => new {
+            r.ReviewId,
+            r.Comment,
+            r.CreatedAt,
+            r.UserId,
+            // Repository içinden User bilgisini de çekiyorsak:
+            Username = r.User?.Username ?? "Anonim Kullanıcı"
+        });
+
+        return Ok(reviewList);
     }
 
-    // 3. Yorum Sil (Kendi yorumunu silmek isteyen kullanıcılar için)
+    // 3. Yorum Sil
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteReview(int id)
     {
