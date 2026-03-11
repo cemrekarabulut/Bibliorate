@@ -21,7 +21,7 @@ Proje, sürdürülebilir ve test edilebilir bir yapı sunmak adına **Onion Arch
 
 ## 📂 Project Structure
 
-
+```text
 BiblioRate/
 ├── Domain/          # Core entities and interfaces
 ├── Application/     # Business logic and services
