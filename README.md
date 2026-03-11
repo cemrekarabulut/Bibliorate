@@ -5,3 +5,6 @@
 
 
 #last update
+#second update by caglar
+
+#third update: pythnon kullanıldı.
