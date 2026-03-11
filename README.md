@@ -23,7 +23,7 @@ Proje, sürdürülebilir ve test edilebilir bir yapı sunmak adına **Onion Arch
 
 ```text
 BiblioRate/
-├── Domain/          # Core entities and interfaces
-├── Application/     # Business logic and services
-├── Infrastructure/  # Database persistence and external tools
-└── Web/            # API endpoints and presentation layer
+├── BiblioRate.API/            # Presentation Layer: API endpoints and controllers
+├── BiblioRate.Application/    # Application Layer: Business logic and services
+├── BiblioRate.Domain/         # Core Layer: Entities, interfaces and domain logic
+└── BiblioRate.Infrastructure/ # Infrastructure Layer: Database and external tools
