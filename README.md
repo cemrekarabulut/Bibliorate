@@ -27,3 +27,4 @@ BiblioRate/
 ├── BiblioRate.Application/    # Application Layer: Business logic and services
 ├── BiblioRate.Domain/         # Core Layer: Entities, interfaces and domain logic
 └── BiblioRate.Infrastructure/ # Infrastructure Layer: Database and external tools
+berra updated this file.
