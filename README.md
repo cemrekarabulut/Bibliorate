@@ -22,14 +22,14 @@ The project is organized into a modular multi-stack architecture to ensure a cle
 *Located in the `src/` directory, following **Onion Architecture**:*
 * **`src/BiblioRate.Domain`**: Core layer housing entities (Books, Users, Reviews) and repository interfaces.
 * **`src/BiblioRate.Application`**: Business logic, DTOs, and service definitions.
-* **`src/BiblioRate.Infrastructure`**: Implementation of database persistence and SQL Server access.
+* **`src/BiblioRate.Infrastructure`**: Implementation of database persistence and MySQL access.
 * **`src/BiblioRate.API`**: Presentation layer with RESTful endpoints developed by **Cemre**.
 
 ### 🔹 Data Analysis (Python Flask)
 * **`analysis/`**: Dedicated microservice managed by **Berra** for advanced book data analytics and trend processing.
 
 ### 🔹 Frontend (Client Application)
-* **`client/`**: The frontend codebase managed by **Çağlar** and **İsmail**, focusing on user interface and API integration.
+* **`client/`**: The frontend codebase managed by **Çağlar** and **Buğra**, focusing on user interface and API integration.
 
 ---
 
