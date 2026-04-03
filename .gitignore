@@ -1,0 +1,12 @@
+# Gereksiz derleme dosyaları
+bin/
+obj/
+
+# Kullanıcıya özel ayarlar ve VS dosyaları
+*.user
+.vs/
+.idea/
+
+# İşletim sistemi dosyaları
+Thumbs.db
+.DS_Store
