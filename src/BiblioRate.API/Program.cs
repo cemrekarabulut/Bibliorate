@@ -29,6 +29,7 @@ builder.Services.AddScoped<ISearchLogRepository, SearchLogRepository>();
 
 // ─── 3. HTTP İstemcileri ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<IGoogleBooksService, GoogleBooksService>();
+builder.Services.AddScoped<DataSeederService>();
 
 builder.Services.AddHttpClient("FlaskApi", client =>
 {
@@ -129,6 +130,16 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.Migrate();
+
+    var dataSeeder = scope.ServiceProvider.GetRequiredService<DataSeederService>();
+    await dataSeeder.SeedAsync();
+}
+
 app.MapControllers();
 
 app.Run();
