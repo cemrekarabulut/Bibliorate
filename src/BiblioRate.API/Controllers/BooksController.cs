@@ -13,16 +13,25 @@ public class BooksController : ControllerBase
     private readonly IBookRepository     _bookRepository;
     private readonly IGoogleBooksService _googleBooksService;
     private readonly IBookViewRepository _viewRepository;
+    private readonly IRatingRepository   _ratingRepository;
 
     public BooksController(
         IBookRepository     bookRepository,
         IGoogleBooksService googleBooksService,
-        IBookViewRepository viewRepository)
+        IBookViewRepository viewRepository,
+        IRatingRepository   ratingRepository)
     {
         _bookRepository     = bookRepository;
         _googleBooksService = googleBooksService;
         _viewRepository     = viewRepository;
+        _ratingRepository   = ratingRepository;
     }
+
+    /// <summary>Kitap ve puan özetleri (Flask / analitik entegrasyonu).</summary>
+    // GET api/books/stats
+    [HttpGet("stats")]
+    public async Task<ActionResult<BooksStatsResponseDto>> GetBooksStats(CancellationToken cancellationToken)
+        => Ok(await _ratingRepository.GetBooksStatsForAnalyticsAsync(cancellationToken));
 
     /// <summary>Veritabanındaki tüm kitapları listeler.</summary>
     // GET api/books

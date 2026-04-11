@@ -1,5 +1,6 @@
 using BiblioRate.Application.Interfaces;
 using BiblioRate.Domain.Entities;
+using BiblioRate.Domain.Models;
 using BiblioRate.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,5 +36,39 @@ public class RatingRepository : IRatingRepository
         return await _context.Ratings
             .Where(r => r.BookId == bookId)
             .AverageAsync(r => (double?)r.Score) ?? 0.0;
+    }
+
+    public async Task<BooksStatsResponseDto> GetBooksStatsForAnalyticsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var byBook = await _context.Books
+            .AsNoTracking()
+            .OrderBy(b => b.BookId)
+            .Select(b => new BookRatingStatsDto
+            {
+                BookId = b.BookId,
+                Title = b.Title,
+                Author = b.Author,
+                Genre = b.Genre,
+                Year = b.Year,
+                AverageRating = b.Ratings.Any()
+                    ? b.Ratings.Average(r => (double)r.Score)
+                    : 0.0,
+                RatingCount = b.Ratings.Count
+            })
+            .ToListAsync(cancellationToken);
+
+        var totalRatings = await _context.Ratings.CountAsync(cancellationToken);
+        var overallAverage = await _context.Ratings.AverageAsync(
+            r => (double?)r.Score,
+            cancellationToken) ?? 0.0;
+
+        return new BooksStatsResponseDto
+        {
+            TotalBooks = byBook.Count,
+            TotalRatings = totalRatings,
+            OverallAverageScore = overallAverage,
+            ByBook = byBook
+        };
     }
 }
