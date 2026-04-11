@@ -77,9 +77,9 @@ public class GoogleBooksService : IGoogleBooksService
                 .Where(book => book is not null)
                 .Cast<Book>();
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        catch (Exception ex)
         {
-            Console.WriteLine("Google API limiti aşıldı, bu kelime atlanıyor.");
+            Console.WriteLine($"Google Books SearchBooksAsync hatası: {ex}");
             return [];
         }
     }
