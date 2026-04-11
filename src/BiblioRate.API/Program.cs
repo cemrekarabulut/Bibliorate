@@ -59,11 +59,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// ─── 5. CORS ────────────────────────────────────────────────────────────────
+// ─── 5. CORS (React ve diğer SPA origin'leri) ───────────────────────────────
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddPolicy("Frontend", policy =>
+    {
+        var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+                      ?? Array.Empty<string>();
+
+        if (origins.Length == 0)
+        {
+            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins(origins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        }
+    });
 });
 
 // ─── 6. API & Swagger (JWT destekli) ────────────────────────────────────────
@@ -127,7 +141,7 @@ if (app.Environment.IsDevelopment())
 // 4. Authorization (ne yapabileceğini belirle)
 // 5. Controller mapping
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
