@@ -5,21 +5,25 @@ namespace BiblioRate.Infrastructure.Services;
 
 public class DataSeederService
 {
-    private static readonly string[] CategoryKeywords =
+    private static readonly string[] AuthorKeywords =
     [
-        "bilim kurgu",
-        "roman",
-        "psikoloji",
-        "macera",
-        "felsefe",
-        "polisiye"
-    ];
-
-    private static readonly string[] AuthorNames =
-    [
-        "Alice Feeney",
-        "Freida McFadden",
-        "Tess Gerritsen"
+        "inauthor:\"Sabahattin Ali\"",
+        "inauthor:\"Zülfü Livaneli\"",
+        "inauthor:\"Stefan Zweig\"",
+        "inauthor:\"Dostoyevsky\"",
+        "inauthor:\"J.K. Rowling\"",
+        "inauthor:\"Dan Brown\"",
+        "inauthor:\"John Steinbeck\"",
+        "inauthor:\"Suzanne Collins\"",
+        "inauthor:\"Arthur Conan Doyle\"",
+        "inauthor:\"Stephen King\"",
+        "inauthor:\"Agatha Christie\"",
+        "inauthor:\"Ahmet Ümit\"",
+        "inauthor:\"Yaşar Kemal\"",
+        "inauthor:\"George Orwell\"",
+        "inauthor:\"Tolkien\"",
+        "inauthor:\"Charles Dickens\"",
+        "inauthor:\"Oscar Wilde\""
     ];
 
     private readonly IGoogleBooksService _googleBooksService;
@@ -35,15 +39,9 @@ public class DataSeederService
     {
         var existingBooks = (await _bookRepository.GetAllBooksAsync()).ToList();
 
-        foreach (var keyword in CategoryKeywords)
+        foreach (var authorKeyword in AuthorKeywords)
         {
-            await ProcessSearchAsync(keyword, existingBooks, cancellationToken);
-        }
-
-        foreach (var author in AuthorNames)
-        {
-            var authorQuery = $"inauthor:\"{author}\"";
-            await ProcessSearchAsync(authorQuery, existingBooks, cancellationToken);
+            await ProcessSearchAsync(authorKeyword, existingBooks, cancellationToken);
         }
     }
 

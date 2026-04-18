@@ -62,6 +62,13 @@ builder.Services.AddAuthorization();
 // ─── 5. CORS (React ve diğer SPA origin'leri) ───────────────────────────────
 builder.Services.AddCors(options =>
 {
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+
     options.AddPolicy("Frontend", policy =>
     {
         var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
@@ -141,7 +148,8 @@ if (app.Environment.IsDevelopment())
 // 4. Authorization (ne yapabileceğini belirle)
 // 5. Controller mapping
 app.UseHttpsRedirection();
-app.UseCors("Frontend");
+app.UseRouting();
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
