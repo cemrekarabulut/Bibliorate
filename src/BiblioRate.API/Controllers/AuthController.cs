@@ -1,4 +1,4 @@
-using BiblioRate.API.DTOs;
+using BiblioRate.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BiblioRate.API.Controllers;
@@ -11,7 +11,7 @@ public class AuthController : ControllerBase
     /// Register endpoint iskeleti (gecici).
     /// </summary>
     [HttpPost("register")]
-    public IActionResult Register([FromBody] UserDTO request)
+    public IActionResult Register([FromBody] UserRegisterDto request)
     {
         return Ok(new
         {
@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
     /// Login endpoint iskeleti (gecici).
     /// </summary>
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginDTO request)
+    public IActionResult Login([FromBody] UserLoginDto request)
     {
         return Ok(new
         {
