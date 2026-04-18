@@ -1,86 +1,96 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { apiFacade } from '../services/apiFacade';
 import BookCard from '../components/discovery/BookCard';
 import './DiscoveryPage.css';
 
+/**
+ * DiscoveryPage
+ * -------------
+ * Main book browsing page. Fetches books from the real API and supports:
+ *   - Debounced text search (hits the /books/search endpoint when active)
+ *   - Client-side genre filtering
+ *   - Sort by rating, review count, or title
+ */
+const DEBOUNCE_MS = 400;
+
 const DiscoveryPage = () => {
-  const [books, setBooks] = useState([]);
-  const [genres, setGenres] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Filters
-  const [searchTerm, setSearchTerm] = useState('');
+  const [books, setBooks]               = useState([]);
+  const [genres, setGenres]             = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [searchTerm, setSearchTerm]     = useState('');
   const [selectedGenre, setSelectedGenre] = useState('All');
-  const [sortBy, setSortBy] = useState('rating');
-  
-  // Load Genres once
+  const [sortBy, setSortBy]             = useState('rating');
+
+  // ── Load genres once on mount ───────────────────────────────────────────
   useEffect(() => {
-    const fetchGenres = async () => {
-      const data = await apiFacade.getGenres();
-      setGenres(data);
-    };
-    fetchGenres();
+    apiFacade.getGenres()
+      .then(setGenres)
+      .catch(err => console.error('Failed to load genres:', err));
   }, []);
 
-  // Load Books when filters change
-  useEffect(() => {
-    const fetchBooks = async () => {
-      setLoading(true);
-      try {
-        const data = await apiFacade.getBooks({
-          search: searchTerm,
-          genre: selectedGenre,
-          sortBy: sortBy
-        });
-        setBooks(data);
-      } catch (error) {
-        console.error("Failed to fetch books:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Debounce search
-    const delayDebounceFn = setTimeout(() => {
-      fetchBooks();
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
+  // ── Load books when filters change (debounced) ──────────────────────────
+  const fetchBooks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiFacade.getBooks({ search: searchTerm, genre: selectedGenre, sortBy });
+      setBooks(data);
+    } catch (err) {
+      console.error('Failed to fetch books:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [searchTerm, selectedGenre, sortBy]);
+
+  useEffect(() => {
+    const timer = setTimeout(fetchBooks, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [fetchBooks]);
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedGenre('All');
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <div className="discovery-page">
       <header className="discovery-header">
-        <h1 className="page-title">Discover your next <span className="text-gradient">favorite book</span></h1>
-        <p className="page-subtitle">Explore thousands of titles, curated by our intelligent recommendation engine.</p>
-        
+        <h1 className="page-title">
+          Discover your next <span className="text-gradient">favourite book</span>
+        </h1>
+        <p className="page-subtitle">
+          Explore thousands of titles, curated by our intelligent recommendation engine.
+        </p>
+
         <div className="search-container">
           <div className="search-bar glass-panel">
             <Search className="search-icon" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by title, author, or keyword..." 
+            <input
+              type="text"
+              placeholder="Search by title, author, or keyword..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
+              aria-label="Search books"
             />
           </div>
         </div>
       </header>
 
       <div className="discovery-content">
-        <aside className="filter-sidebar glass-panel">
+        <aside className="filter-sidebar glass-panel" aria-label="Filters">
           <div className="sidebar-header">
             <SlidersHorizontal size={18} className="text-gradient" />
             <h2>Filters</h2>
           </div>
-          
+
           <div className="filter-group">
             <h3>Genres</h3>
             <div className="genre-list">
               {genres.map(genre => (
-                <button 
+                <button
                   key={genre}
                   className={`genre-btn ${selectedGenre === genre ? 'active' : ''}`}
                   onClick={() => setSelectedGenre(genre)}
@@ -93,10 +103,11 @@ const DiscoveryPage = () => {
 
           <div className="filter-group">
             <h3>Sort By</h3>
-            <select 
+            <select
               className="sort-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
+              aria-label="Sort books by"
             >
               <option value="rating">Highest Rated</option>
               <option value="reviews">Most Reviewed</option>
@@ -114,7 +125,7 @@ const DiscoveryPage = () => {
           {loading ? (
             <div className="loading-state">
               <Loader2 className="spinner" size={40} />
-              <p>Curating your catalog...</p>
+              <p>Curating your catalogue…</p>
             </div>
           ) : books.length > 0 ? (
             <div className="book-grid">
@@ -127,13 +138,7 @@ const DiscoveryPage = () => {
               <Search size={48} className="empty-icon" />
               <h3>No books found</h3>
               <p>We couldn't find any books matching your criteria. Try adjusting your filters.</p>
-              <button 
-                className="clear-btn"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedGenre('All');
-                }}
-              >
+              <button className="clear-btn" onClick={handleClearFilters}>
                 Clear all filters
               </button>
             </div>

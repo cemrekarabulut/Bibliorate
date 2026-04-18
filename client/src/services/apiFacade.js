@@ -1,168 +1,213 @@
-// Mock Data
-export const MOCK_BOOKS = [
-  {
-    id: 1,
-    title: "The Midnight Library",
-    author: "Matt Haig",
-    genre: "Fiction",
-    rating: 4.8,
-    reviews: 12450,
-    coverUrl: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600",
-    description: "Between life and death there is a library, and within that library, the shelves go on forever."
-  },
-  {
-    id: 2,
-    title: "Dune",
-    author: "Frank Herbert",
-    genre: "Science Fiction",
-    rating: 4.9,
-    reviews: 84320,
-    coverUrl: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=600",
-    description: "Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides."
-  },
-  {
-    id: 3,
-    title: "Sapiens: A Brief History of Humankind",
-    author: "Yuval Noah Harari",
-    genre: "Non-Fiction",
-    rating: 4.7,
-    reviews: 53210,
-    coverUrl: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=600",
-    description: "A hundred thousand years ago, at least six different species of humans inhabited Earth."
-  },
-  {
-    id: 4,
-    title: "Project Hail Mary",
-    author: "Andy Weir",
-    genre: "Science Fiction",
-    rating: 4.9,
-    reviews: 31200,
-    coverUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=600",
-    description: "Ryland Grace is the sole survivor on a desperate, last-chance mission."
-  },
-  {
-    id: 5,
-    title: "The Alchemist",
-    author: "Paulo Coelho",
-    genre: "Fiction",
-    rating: 4.5,
-    reviews: 42100,
-    coverUrl: "https://images.unsplash.com/photo-1518063004380-4d4eb07ac6fd?auto=format&fit=crop&q=80&w=600",
-    description: "The mystical story of Santiago, an Andalusian shepherd boy."
-  },
-  {
-    id: 6,
-    title: "Atomic Habits",
-    author: "James Clear",
-    genre: "Self-Help",
-    rating: 4.9,
-    reviews: 98110,
-    coverUrl: "https://images.unsplash.com/photo-1589998059171-988d887df646?auto=format&fit=crop&q=80&w=600",
-    description: "No matter your goals, Atomic Habits offers a proven framework for improving."
-  },
-  {
-    id: 7,
-    title: "Neuromancer",
-    author: "William Gibson",
-    genre: "Science Fiction",
-    rating: 4.3,
-    reviews: 15400,
-    coverUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=600",
-    description: "Set in the future, the novel follows Henry Dorsett Case."
-  },
-  {
-    id: 8,
-    title: "Thinking, Fast and Slow",
-    author: "Daniel Kahneman",
-    genre: "Psychology",
-    rating: 4.6,
-    reviews: 67200,
-    coverUrl: "https://images.unsplash.com/photo-1555448248-2571daf6344b?auto=format&fit=crop&q=80&w=600",
-    description: "The universally engaging explanation of the two systems that drive the way we think."
-  }
-];
+/**
+ * apiFacade.js
+ * ------------
+ * Facade Pattern implementation that provides a single, unified interface
+ * for the React frontend to communicate with:
+ *   - The C# .NET 8 REST API  (http://localhost:5105)
+ *   - Analytics endpoints forwarded through the same API from Flask
+ *
+ * All components import { apiFacade } — they never touch fetch/headers directly.
+ * Swapping the base URL is the only change needed for staging / production.
+ */
 
-export const MOCK_GENRES = ["All", "Fiction", "Science Fiction", "Non-Fiction", "Self-Help", "Psychology"];
+const API_BASE_URL = 'http://localhost:5105/api';
 
-const MOCK_ANALYTICS = {
-  overview: {
-    totalBooks: 14502,
-    activeUsers: 840,
-    dailyReviews: 324
-  },
-  genrePopularity: [
-    { name: 'Sci-Fi', views: 4000 },
-    { name: 'Fiction', views: 3000 },
-    { name: 'Self-Help', views: 2000 },
-    { name: 'Psychology', views: 2780 },
-    { name: 'Non-Fiction', views: 1890 },
-  ],
-  engagementData: [
-    { month: 'Jan', activeUsers: 400 },
-    { month: 'Feb', activeUsers: 500 },
-    { month: 'Mar', activeUsers: 600 },
-    { month: 'Apr', activeUsers: 840 },
-  ]
+// ─── Private Helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Constructs request headers.
+ * Attaches the Authorization header when a JWT token is available.
+ */
+const buildHeaders = (token = null) => {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
 };
 
 /**
- * ApiFacade serves as a bridge between the React frontend, the .NET backend API,
- * and the Flask Analytics Microservice.
- * 
- * Currently using Mock Data. Can be swapped for axios/fetch when backend is ready.
+ * Generic fetch wrapper.
+ * Throws a descriptive Error on non-2xx responses.
  */
+const request = async (endpoint, options = {}) => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+
+  if (!response.ok) {
+    let message = `API error: ${response.status} ${response.statusText}`;
+    try {
+      const body = await response.text();
+      if (body) message = body;
+    } catch { /* ignore parse errors */ }
+    throw new Error(message);
+  }
+
+  // 204 No Content — return null instead of trying to parse JSON
+  if (response.status === 204) return null;
+  return response.json();
+};
+
+// ─── Data Normalisation ───────────────────────────────────────────────────────
+
+/**
+ * Maps the backend BookDto shape to the flat shape used by UI components.
+ *
+ * Backend:  { id, title, authors[], description, thumbnailUrl, ratingAvg, ratingCount, categories[] }
+ * Frontend: { id, title, author, genre, description, coverUrl, rating, reviews }
+ */
+const normaliseBook = (dto) => ({
+  id:          dto.id,
+  title:       dto.title ?? 'Unknown Title',
+  author:      Array.isArray(dto.authors) && dto.authors.length > 0
+                 ? dto.authors.join(', ')
+                 : 'Unknown Author',
+  genre:       Array.isArray(dto.categories) && dto.categories.length > 0
+                 ? dto.categories[0]
+                 : 'General',
+  description: dto.description ?? '',
+  coverUrl:    dto.thumbnailUrl ?? 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
+  rating:      dto.ratingAvg   ?? 0,
+  reviews:     dto.ratingCount ?? 0,
+});
+
+// ─── ApiFacade Class ──────────────────────────────────────────────────────────
+
 class ApiFacade {
-  async getBooks({ search = "", genre = "All", sortBy = "rating" } = {}) {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    let results = [...MOCK_BOOKS];
-    if (search) {
-      const lowerSearch = search.toLowerCase();
-      results = results.filter(book => 
-        book.title.toLowerCase().includes(lowerSearch) || 
-        book.author.toLowerCase().includes(lowerSearch)
-      );
+
+  // ── Books ────────────────────────────────────────────────────────────────
+
+  /**
+   * Fetches all books. When a search query is supplied the backend's /search
+   * endpoint is used (hits both local DB + Google Books). Otherwise, all local
+   * books are returned and sorted/filtered on the client.
+   */
+  async getBooks({ search = '', genre = 'All', sortBy = 'rating' } = {}) {
+    let books;
+
+    if (search.trim()) {
+      // Use search endpoint which queries local DB + Google Books
+      const data = await request(`/books/search?q=${encodeURIComponent(search)}`);
+      // Merge local + global results, deduplicate by id
+      const all = [...(data.localResults ?? []), ...(data.globalResults ?? [])];
+      books = Array.from(new Map(all.map(b => [b.id, b])).values()).map(normaliseBook);
+    } else {
+      const data = await request('/books');
+      books = data.map(normaliseBook);
     }
-    if (genre !== "All") results = results.filter(book => book.genre === genre);
-    if (sortBy === "rating") results.sort((a, b) => b.rating - a.rating);
-    else if (sortBy === "reviews") results.sort((a, b) => b.reviews - a.reviews);
-    else if (sortBy === "title") results.sort((a, b) => a.title.localeCompare(b.title));
-    return results;
+
+    if (genre !== 'All') {
+      books = books.filter(b => b.genre === genre);
+    }
+
+    const sorters = {
+      rating:  (a, b) => b.rating  - a.rating,
+      reviews: (a, b) => b.reviews - a.reviews,
+      title:   (a, b) => a.title.localeCompare(b.title),
+    };
+    if (sorters[sortBy]) books.sort(sorters[sortBy]);
+
+    return books;
   }
 
+  /**
+   * Fetches a single book by its numeric ID.
+   * The backend records a page-view event on this call.
+   */
+  async getBookById(id, userId = null) {
+    const query = userId ? `?userId=${userId}` : '';
+    const dto = await request(`/books/${id}${query}`);
+    return normaliseBook(dto);
+  }
+
+  /**
+   * Derives unique genre labels from the full book list.
+   * Prefixes with "All" to match the filter UI expectation.
+   */
   async getGenres() {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return MOCK_GENRES;
+    const data  = await request('/books');
+    const books = data.map(normaliseBook);
+    const unique = [...new Set(books.map(b => b.genre).filter(Boolean))];
+    return ['All', ...unique];
   }
 
-  // --- NEW PHASE 2 MOCKS --- //
+  // ── Auth ──────────────────────────────────────────────────────────────────
 
-  async getBookById(id) {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const book = MOCK_BOOKS.find(b => b.id === id);
-    if (!book) throw new Error("Book not found");
-    return book;
+  /**
+   * Authenticates a user with username + password.
+   * Returns { token, userId, username, email } on success.
+   */
+  async login(username, password) {
+    return request('/auth/login', {
+      method:  'POST',
+      headers: buildHeaders(),
+      body:    JSON.stringify({ username, password }),
+    });
   }
 
-  async login(email, password) {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    if (email && password) return { token: 'mock-jwt-token', user: { name: 'Bookworm', email } };
-    throw new Error("Invalid credentials");
+  /**
+   * Registers a new user account.
+   * Returns { userId, username, email } on success.
+   */
+  async register({ username, email, password }) {
+    return request('/auth/register', {
+      method:  'POST',
+      headers: buildHeaders(),
+      body:    JSON.stringify({ username, email, password }),
+    });
   }
 
-  async register(data) {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return { success: true };
+  // ── Favorites ─────────────────────────────────────────────────────────────
+
+  /**
+   * Fetches the favourite books for a given user.
+   * Requires authentication (token passed in header).
+   */
+  async getFavorites(userId, token) {
+    const data = await request(`/favorites/user/${userId}`, {
+      headers: buildHeaders(token),
+    });
+    return data.map(normaliseBook);
   }
 
-  async getFavorites() {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return [MOCK_BOOKS[0], MOCK_BOOKS[3], MOCK_BOOKS[5]];
+  /**
+   * Adds a book to the user's favourites list.
+   */
+  async addFavorite(userId, bookId, token) {
+    return request('/favorites', {
+      method:  'POST',
+      headers: buildHeaders(token),
+      body:    JSON.stringify({ userId, bookId }),
+    });
   }
 
+  /**
+   * Removes a book from the user's favourites list.
+   */
+  async removeFavorite(userId, bookId, token) {
+    return request(`/favorites/remove?userId=${userId}&bookId=${bookId}`, {
+      method:  'DELETE',
+      headers: buildHeaders(token),
+    });
+  }
+
+  // ── Analytics ─────────────────────────────────────────────────────────────
+
+  /**
+   * Fetches analytics data from the .NET API, which forwards the requests
+   * to the Flask microservice. Returns a unified object used by AnalyticsDashboard.
+   */
   async getAnalytics() {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    // Simulates call to Flask Microservice
-    return MOCK_ANALYTICS;
+    const [genrePopularity, mostViewed] = await Promise.allSettled([
+      request('/analytics/genre-popularity'),
+      request('/analytics/most-viewed'),
+    ]);
+
+    return {
+      genrePopularity: genrePopularity.status === 'fulfilled'
+        ? (genrePopularity.value ?? []).map(g => ({ name: g.genre ?? g.name, views: g.count ?? g.views ?? 0 }))
+        : [],
+      mostViewed: mostViewed.status === 'fulfilled'
+        ? (mostViewed.value ?? [])
+        : [],
+    };
   }
 }
 
