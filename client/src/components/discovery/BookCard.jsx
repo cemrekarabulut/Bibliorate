@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Star, MessageCircle } from 'lucide-react';
 import './BookCard.css';
 
@@ -8,7 +9,7 @@ const BookCard = ({ book }) => {
       <div className="book-cover-wrapper">
         <img src={book.coverUrl} alt={book.title} className="book-cover" />
         <div className="book-overlay">
-          <button className="view-btn">View Details</button>
+          <Link to={`/book/${book.id}`} className="view-btn">View Details</Link>
         </div>
         <div className="book-genre-badge">{book.genre}</div>
       </div>

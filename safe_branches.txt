@@ -1,0 +1,39 @@
+a028d7a updated
+README.md
+6cfb8d2 updated
+README.md
+e4bb9fc add professional README only
+README.md
+aaec17a Berra update
+README.md
+851df50 Bugra update
+README.md
+0cb95e1 Update README.md
+56f0677 Update README.md
+README.md
+c246756 Update README.md
+README.md
+b08a666 Cemre: updated
+README.md
+5d631b6 Cemre: Proje yap??s?? g??rseli d??zeltildi
+README.md
+23f9446 Cemre: README'deki conflict kalintilari temizlendi
+README.md
+91b6519 Cemre: Detayli README ana sayfaya tasindi
+b87ef8b Conflict resolved manually by merging changes
+7f89b4e Cemre: 7. satira kendi yorumum eklendi
+README.md
+3531a9b README updated
+README.md
+3b8b2e2 Update README.md
+README.md
+5438bfe README updated by caglar
+README.md
+35274ca Update README.md
+README.md
+5741b34 Update README by Berra
+README.md
+6656910 Cemre: Proje ozeti ve teknik detaylar eklendi
+README.md
+6c4fd27 Initial commit
+README.md

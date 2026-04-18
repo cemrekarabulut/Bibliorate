@@ -84,6 +84,27 @@ export const MOCK_BOOKS = [
 
 export const MOCK_GENRES = ["All", "Fiction", "Science Fiction", "Non-Fiction", "Self-Help", "Psychology"];
 
+const MOCK_ANALYTICS = {
+  overview: {
+    totalBooks: 14502,
+    activeUsers: 840,
+    dailyReviews: 324
+  },
+  genrePopularity: [
+    { name: 'Sci-Fi', views: 4000 },
+    { name: 'Fiction', views: 3000 },
+    { name: 'Self-Help', views: 2000 },
+    { name: 'Psychology', views: 2780 },
+    { name: 'Non-Fiction', views: 1890 },
+  ],
+  engagementData: [
+    { month: 'Jan', activeUsers: 400 },
+    { month: 'Feb', activeUsers: 500 },
+    { month: 'Mar', activeUsers: 600 },
+    { month: 'Apr', activeUsers: 840 },
+  ]
+};
+
 /**
  * ApiFacade serves as a bridge between the React frontend, the .NET backend API,
  * and the Flask Analytics Microservice.
@@ -92,12 +113,8 @@ export const MOCK_GENRES = ["All", "Fiction", "Science Fiction", "Non-Fiction", 
  */
 class ApiFacade {
   async getBooks({ search = "", genre = "All", sortBy = "rating" } = {}) {
-    // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 600));
-
     let results = [...MOCK_BOOKS];
-
-    // Filter by search term (Title or Author)
     if (search) {
       const lowerSearch = search.toLowerCase();
       results = results.filter(book => 
@@ -105,27 +122,47 @@ class ApiFacade {
         book.author.toLowerCase().includes(lowerSearch)
       );
     }
-
-    // Filter by genre
-    if (genre !== "All") {
-      results = results.filter(book => book.genre === genre);
-    }
-
-    // Sort
-    if (sortBy === "rating") {
-      results.sort((a, b) => b.rating - a.rating);
-    } else if (sortBy === "reviews") {
-      results.sort((a, b) => b.reviews - a.reviews);
-    } else if (sortBy === "title") {
-      results.sort((a, b) => a.title.localeCompare(b.title));
-    }
-
+    if (genre !== "All") results = results.filter(book => book.genre === genre);
+    if (sortBy === "rating") results.sort((a, b) => b.rating - a.rating);
+    else if (sortBy === "reviews") results.sort((a, b) => b.reviews - a.reviews);
+    else if (sortBy === "title") results.sort((a, b) => a.title.localeCompare(b.title));
     return results;
   }
 
   async getGenres() {
     await new Promise(resolve => setTimeout(resolve, 200));
     return MOCK_GENRES;
+  }
+
+  // --- NEW PHASE 2 MOCKS --- //
+
+  async getBookById(id) {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const book = MOCK_BOOKS.find(b => b.id === id);
+    if (!book) throw new Error("Book not found");
+    return book;
+  }
+
+  async login(email, password) {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    if (email && password) return { token: 'mock-jwt-token', user: { name: 'Bookworm', email } };
+    throw new Error("Invalid credentials");
+  }
+
+  async register(data) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { success: true };
+  }
+
+  async getFavorites() {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    return [MOCK_BOOKS[0], MOCK_BOOKS[3], MOCK_BOOKS[5]];
+  }
+
+  async getAnalytics() {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    // Simulates call to Flask Microservice
+    return MOCK_ANALYTICS;
   }
 }
 
