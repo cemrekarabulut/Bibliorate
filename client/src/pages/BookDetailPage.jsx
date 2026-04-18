@@ -9,6 +9,11 @@ const BookDetailPage = () => {
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [actionError, setActionError] = useState('');
+  
+  // Mock login state (in a real app, this comes from Context/Redux)
+  const isLoggedIn = false; 
+
   useEffect(() => {
     const fetchBook = async () => {
       setLoading(true);
@@ -23,6 +28,15 @@ const BookDetailPage = () => {
     };
     fetchBook();
   }, [id]);
+
+  const handleRestrictedAction = (actionName) => {
+    if (!isLoggedIn) {
+      setActionError(`You must be logged in to ${actionName}.`);
+      setTimeout(() => setActionError(''), 3000);
+      return;
+    }
+    // Proceed with action
+  };
 
   if (loading) {
     return (
@@ -53,6 +67,12 @@ const BookDetailPage = () => {
         </div>
         
         <div className="detail-info">
+          {actionError && (
+            <div className="auth-error" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {actionError}
+              <Link to="/login" className="primary-btn" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>Log In</Link>
+            </div>
+          )}
           <div className="detail-badges">
             <span className="genre-badge">{book.genre}</span>
           </div>
@@ -80,10 +100,10 @@ const BookDetailPage = () => {
           <p className="detail-desc">{book.description}</p>
           
           <div className="detail-actions">
-            <button className="primary-btn">
+            <button className="primary-btn" onClick={() => handleRestrictedAction('rate books')}>
               <Star size={18} /> Rate this Book
             </button>
-            <button className="secondary-btn">
+            <button className="secondary-btn" onClick={() => handleRestrictedAction('add books to your list')}>
               <BookmarkPlus size={18} /> Add to List
             </button>
           </div>
