@@ -3,6 +3,7 @@ using BiblioRate.Infrastructure.Context;
 using BiblioRate.Infrastructure.Repositories;
 using BiblioRate.Infrastructure.Services;
 using BiblioRate.API.Middleware;
+using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -11,9 +12,20 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ─── 0. .env Yükleme ────────────────────────────────────────────────────────
+// Proje kökündeki .env dosyasından ortam değişkenlerini yükler.
+// Dosya yoksa sessizce devam eder (prod ortamında gerçek env var kullanılır).
+Env.TraversePath().Load();
+
 // ─── 1. Veritabanı ──────────────────────────────────────────────────────────
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Veritabanı bağlantı dizesi bulunamadı.");
+
+// .env'den DB_PASSWORD değerini al; yoksa appsettings.json'daki değeri koru
+var dbPassword       = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? string.Empty;
+var connectionString = string.IsNullOrWhiteSpace(dbPassword)
+    ? rawConnectionString
+    : rawConnectionString.Replace("{DB_PASSWORD}", dbPassword);
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
@@ -27,7 +39,10 @@ builder.Services.AddScoped<IBookViewRepository,  BookViewRepository>();
 builder.Services.AddScoped<IUserRepository,      UserRepository>();
 builder.Services.AddScoped<ISearchLogRepository, SearchLogRepository>();
 
-// ─── 3. HTTP İstemcileri ────────────────────────────────────────────────────
+// ─── 3. Servis Kayıtları ────────────────────────────────────────────────────
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// ─── 4. HTTP İstemcileri ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<IGoogleBooksService, GoogleBooksService>();
 builder.Services.AddScoped<DataSeederService>();
 

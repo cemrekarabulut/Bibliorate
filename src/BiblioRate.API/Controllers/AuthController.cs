@@ -1,4 +1,5 @@
 using BiblioRate.Application.DTOs;
+using BiblioRate.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BiblioRate.API.Controllers;
@@ -7,29 +8,45 @@ namespace BiblioRate.API.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    /// <summary>
-    /// Register endpoint iskeleti (gecici).
-    /// </summary>
-    [HttpPost("register")]
-    public IActionResult Register([FromBody] UserRegisterDto request)
+    private readonly IAuthService _authService;
+
+    public AuthController(IAuthService authService)
     {
-        return Ok(new
-        {
-            message = "Register endpoint hazir. Gercek dogrulama daha sonra eklenecek.",
-            user = request
-        });
+        _authService = authService;
     }
 
     /// <summary>
-    /// Login endpoint iskeleti (gecici).
+    /// Yeni kullanıcı kaydı oluşturur.
+    /// Şifre BCrypt ile hash'lenerek saklanır; asla düz metin olarak kaydedilmez.
+    /// </summary>
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] UserRegisterDto request)
+    {
+        try
+        {
+            var result = await _authService.RegisterAsync(request);
+            return CreatedAtAction(nameof(Register), result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Kullanıcı girişi yapar ve geçerli bir JWT token döner.
     /// </summary>
     [HttpPost("login")]
-    public IActionResult Login([FromBody] UserLoginDto request)
+    public async Task<IActionResult> Login([FromBody] UserLoginDto request)
     {
-        return Ok(new
+        try
         {
-            message = "Login endpoint hazir. Gercek dogrulama daha sonra eklenecek.",
-            login = request
-        });
+            var result = await _authService.LoginAsync(request);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
     }
 }
