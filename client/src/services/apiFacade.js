@@ -53,15 +53,35 @@ const request = async (endpoint, options = {}) => {
  * Backend:  { id, title, authors[], description, thumbnailUrl, ratingAvg, ratingCount, categories[] }
  * Frontend: { id, title, author, genre, description, coverUrl, rating, reviews }
  */
+const genreTranslation = {
+  'kurgu': 'Fiction',
+  'edebiyat': 'Literature',
+  'roman': 'Novel',
+  'genel': 'General',
+  'bilimkurgu': 'Sci-Fi',
+  'tarih': 'History',
+  'biyografi': 'Biography',
+  'şiir': 'Poetry',
+  'tiyatro': 'Theater',
+  'dünya klasikleri': 'Classics',
+  'macera': 'Adventure'
+};
+
+const translateGenre = (g) => {
+  if (!g) return g;
+  const lower = g.trim().toLowerCase();
+  return genreTranslation[lower] || g;
+};
+
 const normaliseBook = (dto) => ({
   id:          dto.id,
   title:       dto.title ?? 'Unknown Title',
   author:      Array.isArray(dto.authors) && dto.authors.length > 0
                  ? dto.authors.join(', ')
                  : 'Unknown Author',
-  genre:       Array.isArray(dto.categories) && dto.categories.length > 0
-                 ? dto.categories[0]
-                 : 'General',
+  genres:      Array.isArray(dto.categories) && dto.categories.length > 0
+                 ? dto.categories.map(translateGenre)
+                 : ['General'],
   description: dto.description ?? '',
   coverUrl:    dto.thumbnailUrl ?? 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
   rating:      dto.ratingAvg   ?? 0,
@@ -94,7 +114,7 @@ class ApiFacade {
     }
 
     if (genre !== 'All') {
-      books = books.filter(b => b.genre === genre);
+      books = books.filter(b => b.genres && b.genres.includes(genre));
     }
 
     const sorters = {
@@ -118,13 +138,26 @@ class ApiFacade {
   }
 
   /**
+   * Submits a star rating (1–10) for a book.
+   * Requires authentication (token in header).
+   */
+  async rateBook(bookId, userId, score, token) {
+    return request('/ratings', {
+      method:  'POST',
+      headers: buildHeaders(token),
+      body:    JSON.stringify({ bookId, userId, score }),
+    });
+  }
+
+  /**
    * Derives unique genre labels from the full book list.
    * Prefixes with "All" to match the filter UI expectation.
    */
   async getGenres() {
     const data  = await request('/books');
     const books = data.map(normaliseBook);
-    const unique = [...new Set(books.map(b => b.genre).filter(Boolean))];
+    const unique = [...new Set(books.flatMap(b => b.genres || []).filter(Boolean))];
+    unique.sort();
     return ['All', ...unique];
   }
 
@@ -151,6 +184,18 @@ class ApiFacade {
       method:  'POST',
       headers: buildHeaders(),
       body:    JSON.stringify({ username, email, password }),
+    });
+  }
+
+  /**
+   * Updates user profile data (username, email, or password).
+   * Requires authentication (token passed in header).
+   */
+  async updateProfile(userId, { username, email, currentPassword, newPassword }, token) {
+    return request('/auth/profile', {
+      method:  'PUT',
+      headers: buildHeaders(token),
+      body:    JSON.stringify({ userId, username, email, currentPassword, newPassword }),
     });
   }
 
