@@ -28,7 +28,7 @@ public class GoogleBooksService : IGoogleBooksService
         {
             // q=Gone+Girl+Gillian+Flynn — kitap adı + yazar adı düz arama
             var q   = query.Replace(" ", "+");
-            var url = $"https://www.googleapis.com/books/v1/volumes?q={q}&printType=books&maxResults=10&langRestrict=en";
+            var url = $"https://www.googleapis.com/books/v1/volumes?q={q}&printType=books&maxResults=40&langRestrict=en";
 
             // Tam URL'i her zaman logla — 0 sonuç gelirse tarayıcıda yapıştırıp test et
             Console.WriteLine($"[API] İstek URL: {url}");

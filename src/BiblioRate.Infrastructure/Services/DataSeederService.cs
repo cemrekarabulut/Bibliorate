@@ -36,7 +36,19 @@ public class DataSeederService
         "Herman Melville",
         "Emily Bronte",
         "F. Scott Fitzgerald",
-        "Oscar Wilde"
+        "Oscar Wilde",
+        // --- Yeni yazarlar ---
+        "Stacy Willingham",
+        "Markus Zusak",
+        "Noelle W. Ihli",
+        "Wulf Dorn",
+        "Kate Alice Marshall",
+        "John Marrs",
+        "Stephenie Meyer",
+        "Alice Feeney",
+        "Ray Bradbury",
+        "William Golding",
+        "Christy Brown"
     ];
 
     /// <summary>
@@ -68,7 +80,19 @@ public class DataSeederService
         "The Housemaid Freida McFadden",        "The Teacher Freida McFadden",
         "Les Miserables Victor Hugo",           "Moby Dick Herman Melville",
         "Wuthering Heights Emily Bronte",       "The Great Gatsby F Scott Fitzgerald",
-        "The Picture of Dorian Gray Oscar Wilde"
+        "The Picture of Dorian Gray Oscar Wilde",
+        // --- Yeni sorgular ---
+        "A Flicker in the Dark Stacy Willingham", "Til Death Do Us Part Stacy Willingham",
+        "The Book Thief Markus Zusak",          "I Am the Messenger Markus Zusak",
+        "Feed Them Silence Noelle Ihli",        "Run All Night Noelle Ihli",
+        "Trigger Wulf Dorn",                    "The Sinner Wulf Dorn",
+        "I Am Still Alive Kate Alice Marshall", "Rules for Vanishing Kate Alice Marshall",
+        "The One John Marrs",                   "The Passengers John Marrs",
+        "Twilight Stephenie Meyer",             "New Moon Stephenie Meyer",
+        "Sometimes I Lie Alice Feeney",         "Rock Paper Scissors Alice Feeney",
+        "Fahrenheit 451 Ray Bradbury",          "The Martian Chronicles Ray Bradbury",
+        "Lord of the Flies William Golding",
+        "My Left Foot Christy Brown"
     ];
 
     /// <summary>
@@ -123,6 +147,27 @@ public class DataSeederService
         ["Wuthering Heights Emily Bronte"]                      = "Emily Bronte",
         ["The Great Gatsby F Scott Fitzgerald"]                 = "F. Scott Fitzgerald",
         ["The Picture of Dorian Gray Oscar Wilde"]              = "Oscar Wilde",
+        // --- Yeni yazar sorguları ---
+        ["A Flicker in the Dark Stacy Willingham"]              = "Stacy Willingham",
+        ["Til Death Do Us Part Stacy Willingham"]               = "Stacy Willingham",
+        ["The Book Thief Markus Zusak"]                         = "Markus Zusak",
+        ["I Am the Messenger Markus Zusak"]                     = "Markus Zusak",
+        ["Feed Them Silence Noelle Ihli"]                       = "Noelle W. Ihli",
+        ["Run All Night Noelle Ihli"]                           = "Noelle W. Ihli",
+        ["Trigger Wulf Dorn"]                                   = "Wulf Dorn",
+        ["The Sinner Wulf Dorn"]                                = "Wulf Dorn",
+        ["I Am Still Alive Kate Alice Marshall"]                = "Kate Alice Marshall",
+        ["Rules for Vanishing Kate Alice Marshall"]             = "Kate Alice Marshall",
+        ["The One John Marrs"]                                  = "John Marrs",
+        ["The Passengers John Marrs"]                           = "John Marrs",
+        ["Twilight Stephenie Meyer"]                            = "Stephenie Meyer",
+        ["New Moon Stephenie Meyer"]                            = "Stephenie Meyer",
+        ["Sometimes I Lie Alice Feeney"]                        = "Alice Feeney",
+        ["Rock Paper Scissors Alice Feeney"]                    = "Alice Feeney",
+        ["Fahrenheit 451 Ray Bradbury"]                         = "Ray Bradbury",
+        ["The Martian Chronicles Ray Bradbury"]                 = "Ray Bradbury",
+        ["Lord of the Flies William Golding"]                   = "William Golding",
+        ["My Left Foot Christy Brown"]                          = "Christy Brown",
     };
 
     /// <summary>
@@ -133,51 +178,61 @@ public class DataSeederService
         new(StringComparer.OrdinalIgnoreCase)
     {
         // Mystery & Thriller
-        ["Agatha Christie"]      = "Mystery & Thriller",
-        ["Arthur Conan Doyle"]   = "Mystery & Thriller",
-        ["Tess Gerritsen"]       = "Mystery & Thriller",
-        ["Dan Brown"]            = "Mystery & Thriller",
-        ["Riley Sager"]          = "Mystery & Thriller",
-        ["Linwood Barclay"]      = "Mystery & Thriller",
-        ["Gillian Flynn"]        = "Mystery & Thriller",
+        ["Agatha Christie"]     = "Mystery & Thriller",
+        ["Arthur Conan Doyle"]  = "Mystery & Thriller",
+        ["Tess Gerritsen"]      = "Mystery & Thriller",
+        ["Dan Brown"]           = "Mystery & Thriller",
+        ["Riley Sager"]         = "Mystery & Thriller",
+        ["Linwood Barclay"]     = "Mystery & Thriller",
+        ["Gillian Flynn"]       = "Mystery & Thriller",
+        ["Stacy Willingham"]    = "Mystery & Thriller",
+        ["Wulf Dorn"]           = "Mystery & Thriller",
+        ["Kate Alice Marshall"] = "Mystery & Thriller",
+        ["John Marrs"]          = "Mystery & Thriller",
+        ["Alice Feeney"]        = "Mystery & Thriller",
+        ["Noelle W. Ihli"]      = "Mystery & Thriller",
 
         // Psychological Thriller
-        ["Freida McFadden"]      = "Psychological Thriller",
-        ["Megan Lally"]          = "Psychological Thriller",
+        ["Freida McFadden"]     = "Psychological Thriller",
+        ["Megan Lally"]         = "Psychological Thriller",
 
         // Fantasy
-        ["Tolkien"]              = "Fantasy",
-        ["J.K. Rowling"]         = "Fantasy",
+        ["Tolkien"]             = "Fantasy",
+        ["J.K. Rowling"]        = "Fantasy",
+        ["Stephenie Meyer"]     = "Fantasy",
 
         // Dystopian
-        ["George Orwell"]        = "Dystopian",
-        ["Suzanne Collins"]      = "Dystopian",
+        ["George Orwell"]       = "Dystopian",
+        ["Suzanne Collins"]     = "Dystopian",
+        ["Ray Bradbury"]        = "Dystopian",
 
         // Horror
-        ["Stephen King"]         = "Horror",
+        ["Stephen King"]        = "Horror",
 
         // Romance
-        ["Jane Austen"]          = "Romance",
-        ["Emily Bronte"]         = "Romance",
+        ["Jane Austen"]         = "Romance",
+        ["Emily Bronte"]        = "Romance",
 
-        // Classic
-        ["Oscar Wilde"]          = "Classic",
-        ["Victor Hugo"]          = "Classic",
-        ["Herman Melville"]      = "Classic",
-        ["F. Scott Fitzgerald"]  = "Classic",
-        ["Mark Twain"]           = "Classic",
+        // Classics & Philosophy — 'Classic' kategorisi buraya merge edildi
+        ["Oscar Wilde"]         = "Classics & Philosophy",
+        ["Victor Hugo"]         = "Classics & Philosophy",
+        ["Herman Melville"]     = "Classics & Philosophy",
+        ["F. Scott Fitzgerald"] = "Classics & Philosophy",
+        ["Mark Twain"]          = "Classics & Philosophy",
+        ["Charles Dickens"]     = "Classics & Philosophy",
+        ["Stefan Zweig"]        = "Classics & Philosophy",
+        ["Dostoyevsky"]         = "Classics & Philosophy",
+        ["Irvin D. Yalom"]      = "Classics & Philosophy",
+        ["William Golding"]     = "Classics & Philosophy",
+        ["José Saramago"]       = "Classics & Philosophy",
 
-        // Classics & Philosophy (GenreNormalizer.AuthorProtectedGenres ile eşleşir)
-        ["Charles Dickens"]      = "Classics & Philosophy",
-        ["Stefan Zweig"]         = "Classics & Philosophy",
-        ["Dostoyevsky"]          = "Classics & Philosophy",
-        ["Irvin D. Yalom"]       = "Classics & Philosophy",
-
-        // Drama
-        ["John Steinbeck"]       = "Drama",
-        ["José Saramago"]        = "Drama",
-        ["Matt Haig"]            = "Drama",
+        // Drama — 'Historical Fiction' ve 'Biography' buraya merge edildi
+        ["John Steinbeck"]      = "Drama",
+        ["Matt Haig"]           = "Drama",
+        ["Christy Brown"]       = "Drama",
+        ["Markus Zusak"]        = "Drama",
     };
+
 
     private readonly IGoogleBooksService _googleBooksService;
     private readonly IBookRepository _bookRepository;
@@ -195,39 +250,49 @@ public class DataSeederService
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
-        // ── Erken çıkış: Veritabanında en az 1 kitap varsa seed'i tamamen atla ──
-        // Kitap sayısını COUNT(*) ile çek — tüm satırları belleğe yükleme
+        // ── DB'deki mevcut kitapları başlangıçta belleğe al ──
+        // Erken return YOK — her sorguda yalnızca eksik kitaplar eklenir (incremental seed).
         var bookCount = await _context.Books.CountAsync(cancellationToken);
+        Console.WriteLine($"[Seeder] Veritabanında {bookCount} kitap mevcut. Eksik kitaplar kontrol ediliyor...");
 
-        if (bookCount > 0)
-        {
-            Console.WriteLine($"[Seeder] Veritabanında {bookCount} kitap mevcut. Seed atlanıyor.");
-            return;
-        }
+        // Mevcut kitapları belleğe al — BookExists karşılaştırması bu liste üzerinden yapılır
+        var existingBooks = await _context.Books
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
 
-        // Yalnızca DB tamamen boşsa buraya ulaşılır
-        Console.WriteLine("[Seeder] Veritabanı boş. Google Books API üzerinden kitaplar yükleniyor...");
-        var existingBooks = new List<Book>();
+        // Adaptive delay: başarılı kayıtta 2 sn, hata/429'da kademeli artış
+        var delayMs = DelayNormalMs;
 
         foreach (var bookQuery in BookQueries)
         {
-            // Sorgudan yazara, yazardan türe ulaş
-            var author = QueryAuthorMap.TryGetValue(bookQuery, out var a) ? a : bookQuery;
-            var genre  = AuthorGenreMap.TryGetValue(author,    out var g) ? g : "General";
-            await ProcessSearchAsync(bookQuery, author, genre, existingBooks, cancellationToken);
+            // TryGetValue/out yok — GetValueOrDefault ile async-uyumlu erişim
+            var author = QueryAuthorMap.GetValueOrDefault(bookQuery, bookQuery);
+            var genre  = AuthorGenreMap.GetValueOrDefault(author,    "Fiction");
+            delayMs = await ProcessSearchAsync(bookQuery, author, genre, existingBooks, delayMs, cancellationToken);
         }
 
         Console.WriteLine("[Seeder] Seed işlemi başarıyla tamamlandı.");
     }
 
-    private async Task ProcessSearchAsync(
+    // ── Adaptive delay sabitleri ──────────────────────────────────────────────
+    private const int DelayNormalMs  =  2_000;  // Başarılı akışta bekleme (2 sn)
+    private const int DelayStep1Ms   =  5_000;  // İlk hata sonrası (5 sn)
+    private const int DelayStep2Ms   = 15_000;  // İkinci hata sonrası (15 sn)
+    private const int DelayStep3Ms   = 30_000;  // Üçüncü hata sonrası (30 sn)
+    private const int DelayMaxMs     = 60_000;  // Maksimum bekleme (60 sn)
+
+    // async metotlarda 'ref' yasak (CS1988) — delayMs değeri return değeri olarak aktarılır.
+    private async Task<int> ProcessSearchAsync(
         string query,
         string authorName,
         string authorGenre,
         List<Book> existingBooks,
+        int delayMs,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        var savedAny = false;
 
         try
         {
@@ -236,14 +301,27 @@ public class DataSeederService
             foreach (var fetchedBook in fetchedBooks)
             {
                 // ── Sıkı Giriş Denetimi (The Great Guard) ──────────────────────
-                // Kural 1: ISBN/Başlık+Yazar bazlı kesin kopya
-                if (BookExists(existingBooks, fetchedBook))
+                // Kural 1: Title veya Author boş olan kitabı kaydetme
+                if (string.IsNullOrWhiteSpace(fetchedBook.Title))
                 {
-                    Console.WriteLine($"[Guard] Atlandı (mevcut): \"{fetchedBook.Title}\"");
+                    Console.WriteLine("[Guard] Atlandı (title boş): başlıksız kitap");
+                    continue;
+                }
+                if (string.IsNullOrWhiteSpace(fetchedBook.Author) ||
+                    fetchedBook.Author.Equals("Unknown Author", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[Guard] Atlandı (yazar boş/bilinmiyor): \"{fetchedBook.Title}\"");
                     continue;
                 }
 
-                // Kural 2: Fuzzy başlık kopyası — "A" kitabının başlığı mevcut "B" kitabının
+                // Kural 2: ISBN/Başlık+Yazar bazlı kesin kopya (DB + bu session'da eklenenler)
+                if (BookExists(existingBooks, fetchedBook))
+                {
+                    Console.WriteLine($"[Guard] Atlandı (DB'de mevcut): \"{fetchedBook.Title}\"");
+                    continue;
+                }
+
+                // Kural 3: Fuzzy başlık kopyası — "A" kitabının başlığı mevcut "B" kitabının
                 // içinde geçiyor ya da tersi (örn. "1984" ↔ "1984 Large Print")
                 var normCandidate = NormTitle(fetchedBook.Title);
                 var fuzzyDuplicate = existingBooks.Any(ex =>
@@ -259,8 +337,7 @@ public class DataSeederService
                     continue;
                 }
 
-                // Kural 3: Açıklama eksik veya çok kısa (GoogleBooksService'ten geçmişse
-                // bu kontrol sağlanmış olmalı, ama ikinci savunma hattı)
+                // Kural 4: Açıklama eksik veya çok kısa (ikinci savunma hattı)
                 if (string.IsNullOrWhiteSpace(fetchedBook.Description) ||
                     fetchedBook.Description.Length < 50)
                 {
@@ -268,28 +345,53 @@ public class DataSeederService
                     continue;
                 }
 
-                // Kural 4: Görsel kalitesi (placehold.co = gerçek kapak yok)
-                if (string.IsNullOrWhiteSpace(fetchedBook.ThumbnailUrl) ||
-                    fetchedBook.ThumbnailUrl.Contains("placehold.co", StringComparison.OrdinalIgnoreCase))
+                // Kural 5: Görsel kalitesi — placehold.co, no_image sinyali veya geçersiz URL
+                if (!IsGoodThumbnail(fetchedBook.ThumbnailUrl))
                 {
-                    Console.WriteLine($"[Guard] Atlandı (görsel yok): \"{fetchedBook.Title}\"");
+                    Console.WriteLine($"[Guard] Atlandı (görsel yok/geçersiz): \"{fetchedBook.Title}\"");
                     continue;
                 }
 
                 // Tüm denetimlerden geçti — kaydet
                 Console.WriteLine($"[Save] \"{fetchedBook.Title}\" - {fetchedBook.Author} (Genre: {fetchedBook.Genre})");
                 await _bookRepository.AddBookAsync(fetchedBook);
-                existingBooks.Add(fetchedBook);
+                existingBooks.Add(fetchedBook);  // aynı session'da mükerer eklemeyi engeller
+                savedAny = true;
             }
+
+            // Başarılı akış: delay'i normal değere sıfırla
+            if (delayMs > DelayNormalMs)
+            {
+                Console.WriteLine($"[Wait] Başarılı yanıt — delay {delayMs / 1000}sn → {DelayNormalMs / 1000}sn'ye sıfırlandı.");
+                delayMs = DelayNormalMs;
+            }
+        }
+        catch (HttpRequestException httpEx) when (
+            httpEx.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
+            httpEx.Message.Contains("429", StringComparison.Ordinal))
+        {
+            // 429 Too Many Requests — delay'i kademeli artır
+            delayMs = delayMs switch
+            {
+                <= DelayNormalMs => DelayStep1Ms,
+                <= DelayStep1Ms  => DelayStep2Ms,
+                <= DelayStep2Ms  => DelayStep3Ms,
+                _                => DelayMaxMs
+            };
+            Console.WriteLine($"[RateLimit] 429 alındı — \"{query}\" sorgusu için delay {delayMs / 1000}sn'ye artırıldı.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Error] {query} aranırken bir sorun oluştu: {ex.Message}");
+            // Diğer hatalar: delay'i bir adım artır ama sessizce devam et
+            delayMs = Math.Min(delayMs * 2, DelayMaxMs);
+            Console.WriteLine($"[Error] \"{query}\" aranırken hata: {ex.Message} (delay → {delayMs / 1000}sn)");
         }
 
-        // Google rate-limit: 10 saniye bekle
-        Console.WriteLine("[Wait] Google API'yi dinlendirmek için 10 saniye bekleniyor...");
-        await Task.Delay(10000, cancellationToken);
+        var waitLabel = savedAny ? "yeni kayıt eklendi" : "değişiklik yok";
+        Console.WriteLine($"[Wait] \"{query}\" tamamlandı ({waitLabel}). {delayMs / 1000}sn bekleniyor...");
+        await Task.Delay(delayMs, cancellationToken);
+
+        return delayMs;  // güncel değeri çağırana geri taşı
     }
 
     // Başlık normalizasyonu — fuzzy karşılaştırma için yardımcı (ProcessSearchAsync içi)
@@ -351,8 +453,12 @@ public class DataSeederService
 
             foreach (var poor in poorQualityBooks)
             {
-                var reason = poor.Description.Length < 50 ? $"kısa açıklama ({poor.Description.Length} karakter)"
-                                                           : "bozuk/sahte görsel";
+                string reason;
+                if (poor.Description.Length < 50)
+                    reason = $"Kısa açıklama ({poor.Description.Length} karakter)";
+                else
+                    reason = GetThumbnailRejectReason(poor.ThumbnailUrl);
+
                 Console.WriteLine($"[Purge] ✗ Silindi: \"{poor.Title}\" (Sebep: {reason})");
             }
 
@@ -506,25 +612,77 @@ public class DataSeederService
 
     /// <summary>
     /// Thumbnail URL'inin gerçek/kaliteli bir kapak görseline işaret edip etmediğini kontrol eder.
-    /// placehold.co, ISBN_MISSING, http:// ve bilinen kötü domain'ler reddedilir.
+    /// <list type="bullet">
+    ///   <item>http:// — güvensiz / genellikle eski-kırık bağlantılar</item>
+    ///   <item>placehold.co, ISBN_MISSING, no_image — gerçek kapak yok sinyalleri</item>
+    ///   <item>&amp;zoom=0 — Google düşük çözünürlükleri</item>
+    ///   <item>&amp;edge=curl — Google'ın minyatür kapak işareti</item>
+    ///   <item>books.google.com/books?id= — görsel değil, kitap sayfası URL'i</item>
+    ///   <item>frontcover/wNNN olmayan — sahte frontcover yolu</item>
+    ///   <item>fife/static.googleusercontent.com, imnotabook — bilinen kötü domain'ler</item>
+    /// </list>
     /// </summary>
     private static bool IsGoodThumbnail(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)) return false;
 
-        // Placeholder veya eksik görsel işaretleri
-        if (url.Contains("placehold.co",              StringComparison.OrdinalIgnoreCase)) return false;
-        if (url.StartsWith("ISBN_MISSING",             StringComparison.OrdinalIgnoreCase)) return false;
-        if (url.StartsWith("http://",                  StringComparison.OrdinalIgnoreCase)) return false;
+        // 1. HTTP yasağı — güvensiz + genellikle eski/kırık
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) return false;
 
-        // Google'ın bilinen kötü thumbnail domain'leri
+        // 2. Placeholder / eksik görsel sinyalleri
+        if (url.Contains("placehold.co",  StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.StartsWith("ISBN_MISSING", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // 3. İçerik 'görsel yok' anahtar kelimeleri
+        if (url.Contains("no_image",      StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.Contains("no_cover",      StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.Contains("missing_cover", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // 4. Google düşük çözünürlük sinyalleri
+        if (url.Contains("&zoom=0",    StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.Contains("&edge=curl", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // 5. books.google.com/books?id= — bu bir sayfa URL'i, görsel URL'i değil
+        if (url.Contains("books.google.com/books?id=", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // 6. Sahte frontcover: /books/content/images/frontcover/ içeren ama
+        //    gerçek boyut parametresi (w=NNN veya h=NNN) taşımayan URL'ler
+        if (url.Contains("books/content/images/frontcover/", StringComparison.OrdinalIgnoreCase) &&
+            !url.Contains("w=", StringComparison.OrdinalIgnoreCase) &&
+            !url.Contains("h=", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // 7. Google'ın bilinen kötü thumbnail domain'leri
         if (url.Contains("static.googleusercontent.com", StringComparison.OrdinalIgnoreCase)) return false;
         if (url.Contains("fife.googleusercontent.com",   StringComparison.OrdinalIgnoreCase)) return false;
         if (url.Contains("imnotabook",                    StringComparison.OrdinalIgnoreCase)) return false;
-        if (url.Contains("no_cover",                      StringComparison.OrdinalIgnoreCase)) return false;
 
         return true;
     }
+
+    /// <summary>
+    /// IsGoodThumbnail'in reddettiği URL için insan okunabilir Türkçe neden döner.
+    /// Purge logu için kullanılır.
+    /// </summary>
+    private static string GetThumbnailRejectReason(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))                                                        return "Görsel URL boş";
+        if (url.StartsWith("http://",                         StringComparison.OrdinalIgnoreCase)) return "Güvensiz HTTP bağlantısı";
+        if (url.Contains("placehold.co",                      StringComparison.OrdinalIgnoreCase)) return "Placeholder görsel (placehold.co)";
+        if (url.StartsWith("ISBN_MISSING",                    StringComparison.OrdinalIgnoreCase)) return "ISBN eksik, görsel yok";
+        if (url.Contains("no_image",                          StringComparison.OrdinalIgnoreCase)) return "'no_image' sinyali";
+        if (url.Contains("no_cover",                          StringComparison.OrdinalIgnoreCase)) return "'no_cover' sinyali";
+        if (url.Contains("missing_cover",                     StringComparison.OrdinalIgnoreCase)) return "'missing_cover' sinyali";
+        if (url.Contains("&zoom=0",                           StringComparison.OrdinalIgnoreCase)) return "Düşük çözünürlük (zoom=0)";
+        if (url.Contains("&edge=curl",                        StringComparison.OrdinalIgnoreCase)) return "Minyatür kapak (edge=curl)";
+        if (url.Contains("books.google.com/books?id=",        StringComparison.OrdinalIgnoreCase)) return "Kitap sayfası URL'i (görsel değil)";
+        if (url.Contains("books/content/images/frontcover/",  StringComparison.OrdinalIgnoreCase)) return "Sahte frontcover (boyut parametresi yok)";
+        if (url.Contains("static.googleusercontent.com",      StringComparison.OrdinalIgnoreCase)) return "Google placeholder domain";
+        if (url.Contains("fife.googleusercontent.com",        StringComparison.OrdinalIgnoreCase)) return "Google thumbnail domain (fife)";
+        if (url.Contains("imnotabook",                        StringComparison.OrdinalIgnoreCase)) return "'imnotabook' sinyali";
+        return "Bilinmeyen görsel sorunu";
+    }
+
 
     /// <summary>
     /// Başlığı fuzzy karşılaştırma için normalize eder:

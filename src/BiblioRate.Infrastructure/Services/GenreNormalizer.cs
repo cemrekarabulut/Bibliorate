@@ -4,13 +4,15 @@ namespace BiblioRate.Infrastructure.Services;
 /// Merkezi tür (genre) normalizasyon motoru.
 /// GoogleBooksService (yeni kitap eşleştirme) ve DataSeederService (mevcut kitap güncelleme)
 /// tarafından paylaşılır; her iki kaynakta da aynı kurallar uygulanır.
+/// Hedef: 8 ana kategori — Mystery &amp; Thriller, Classics &amp; Philosophy, Drama, Dystopian,
+/// Fantasy, Romance, Horror, Psychological Thriller.
 /// </summary>
 internal static class GenreNormalizer
 {
     // ── Blacklist ─────────────────────────────────────────────────────────────
     /// <summary>
     /// Anlamsız, lokasyon bazlı veya aşırı jenerik etiketler.
-    /// Bu değerler tür olarak saklanmaz; yerine fallback kullanılır.
+    /// Bu değerler tür olarak saklanmaz; yerine fallback ("Fiction") kullanılır.
     /// </summary>
     internal static readonly HashSet<string> Blacklist = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -18,6 +20,12 @@ internal static class GenreNormalizer
         "Fiction", "General", "General Fiction", "Literary Fiction",
         "English Fiction", "American Fiction", "Literary Collections",
         "Juvenile Fiction", "Chess", "Nonfiction",
+
+        // Birleştirilmiş kategoriler — Classics & Philosophy veya Drama'ya merge edildi
+        "Classic", "Classics", "Historical Fiction", "Biography", "Autobiography",
+
+        // Google'dan gelen çocuk/aile etiketleri
+        "Adopted children", "Family", "Juvenile",
 
         // Lokasyon/ülke etiketleri
         "England", "Austria", "Germany", "France", "Europe",
@@ -27,41 +35,78 @@ internal static class GenreNormalizer
     };
 
     // ── Romance sinyalleri ────────────────────────────────────────────────────
-    /// <summary>Genre veya description'da bu kelimeler varsa kitap "Romance" olarak sınıflandırılır.</summary>
+    /// <summary>
+    /// Genre veya description'da bu kelimeler varsa kitap "Romance" olarak sınıflandırılır.
+    /// "Love" çıkarıldı — thriller/drama açıklamalarında çok fazla false positive üretiyordu.
+    /// </summary>
     private static readonly string[] RomanceSignals =
     [
-        "Romance", "Love", "Romantic", "Relationship", "Jane Austen"
+        "Romance", "Romantic", "Relationship", "Jane Austen",
     ];
 
     // ── Yazar koruma tablosu ──────────────────────────────────────────────────
     /// <summary>
-    /// Bu yazarların kitaplarında description'daki "Love", "Romantic" vb. kelimelere bakılmaksızın
-    /// AuthorGenreMap'teki sabit tür uygulanır.
-    /// Örnek: Dostoyevsky'nin açıklamasında "love" geçse de kitap "Classics &amp; Philosophy" kalır.
+    /// Bu yazarların kitaplarında description/genre sinyallerine bakılmaksızın
+    /// kesin tür uygulanır. Tüm 8 ana kategori burada temsil edilir.
+    /// Yazar adı Contains kontrolüyle eşleşir (kısmi ad desteği).
     /// </summary>
     internal static readonly Dictionary<string, string> AuthorProtectedGenres =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            // Classics & Philosophy — description'daki romance sinyaline rağmen korunur
-            ["Stefan Zweig"]       = "Classics & Philosophy",
-            ["Dostoyevsky"]        = "Classics & Philosophy",
-            ["Charles Dickens"]    = "Classics & Philosophy",
-            ["Irvin D. Yalom"]     = "Classics & Philosophy",
+            // ── Mystery & Thriller ────────────────────────────────────────────
+            ["Gillian Flynn"]       = "Mystery & Thriller",
+            ["Dan Brown"]           = "Mystery & Thriller",
+            ["Agatha Christie"]     = "Mystery & Thriller",
+            ["Arthur Conan Doyle"]  = "Mystery & Thriller",
+            ["Tess Gerritsen"]      = "Mystery & Thriller",
+            ["Riley Sager"]         = "Mystery & Thriller",
+            ["Linwood Barclay"]     = "Mystery & Thriller",
+            ["Stacy Willingham"]    = "Mystery & Thriller",
+            ["Wulf Dorn"]           = "Mystery & Thriller",
+            ["Kate Alice Marshall"] = "Mystery & Thriller",
+            ["John Marrs"]          = "Mystery & Thriller",
+            ["Alice Feeney"]        = "Mystery & Thriller",
+            ["Noelle W. Ihli"]      = "Mystery & Thriller",
 
-            // Drama — korunur
-            ["John Steinbeck"]     = "Drama",
-            ["José Saramago"]      = "Drama",
-            ["Matt Haig"]          = "Drama",
+            // ── Classics & Philosophy ─────────────────────────────────────────
+            ["Victor Hugo"]         = "Classics & Philosophy",
+            ["Oscar Wilde"]         = "Classics & Philosophy",
+            ["Herman Melville"]     = "Classics & Philosophy",
+            ["Stefan Zweig"]        = "Classics & Philosophy",
+            ["Dostoyevsky"]         = "Classics & Philosophy",
+            ["Charles Dickens"]     = "Classics & Philosophy",
+            ["William Golding"]     = "Classics & Philosophy",
+            ["José Saramago"]       = "Classics & Philosophy",
+            ["Irvin D. Yalom"]      = "Classics & Philosophy",
+            ["Mark Twain"]          = "Classics & Philosophy",
+            ["F. Scott Fitzgerald"] = "Classics & Philosophy",
 
-            // Dystopian — korunur
-            ["Suzanne Collins"]    = "Dystopian",
-            ["George Orwell"]      = "Dystopian",
+            // ── Drama ─────────────────────────────────────────────────────────
+            ["John Steinbeck"]      = "Drama",
+            ["Matt Haig"]           = "Drama",
+            ["Christy Brown"]       = "Drama",
+            ["Markus Zusak"]        = "Drama",
 
-            // Mystery & Thriller — korunur (Sherlock Holmes asla Romance olamaz)
-            ["Gillian Flynn"]      = "Mystery & Thriller",
-            ["Agatha Christie"]    = "Mystery & Thriller",
-            ["Dan Brown"]          = "Mystery & Thriller",
-            ["Arthur Conan Doyle"] = "Mystery & Thriller",   // Sherlock Holmes Fix
+            // ── Dystopian ─────────────────────────────────────────────────────
+            ["Suzanne Collins"]     = "Dystopian",
+            ["George Orwell"]       = "Dystopian",
+            ["Ray Bradbury"]        = "Dystopian",
+
+            // ── Fantasy ───────────────────────────────────────────────────────
+            ["J.K. Rowling"]        = "Fantasy",
+            ["Tolkien"]             = "Fantasy",
+            ["Stephenie Meyer"]     = "Fantasy",
+
+            // ── Romance ───────────────────────────────────────────────────────
+            ["Jane Austen"]         = "Romance",
+            ["Emily Bronte"]        = "Romance",
+
+            // ── Horror ────────────────────────────────────────────────────────
+            ["Stephen King"]        = "Horror",
+
+            // ── Psychological Thriller ────────────────────────────────────────
+            ["Freida McFadden"]     = "Psychological Thriller",
+            ["Megan Lally"]         = "Psychological Thriller",
         };
 
     // ── Birleştirme kuralları (sıralı — ilk eşleşen kazanır) ─────────────────
@@ -71,15 +116,20 @@ internal static class GenreNormalizer
     /// </summary>
     private static readonly (string[] Triggers, string Output)[] MergeRules =
     [
-        // Mystery & Thriller: dedektif, suç, gerilim alt türleri birleştirilir
+        // Mystery & Thriller: dedektif, suç, gerilim alt türleri
         (
             ["Detective", "Mystery", "Crime", "Thriller", "Suspense", "Noir"],
             "Mystery & Thriller"
         ),
-        // Classics & Philosophy: felsefe ve edebi eleştiri aynı çatı altında
+        // Classics & Philosophy: "Classic" ve felsefe içerikli etiketler
         (
-            ["Philosophy", "Literary Criticism", "Philosophical"],
+            ["Classic", "Philosophy", "Literary Criticism", "Philosophical", "Canonical"],
             "Classics & Philosophy"
+        ),
+        // Drama: tarihsel kurgu ve biyografi Drama'ya çekilir
+        (
+            ["Historical Fiction", "Historical", "Biography", "Autobiography", "Literary Drama"],
+            "Drama"
         ),
     ];
 
@@ -88,10 +138,10 @@ internal static class GenreNormalizer
     /// <summary>
     /// Ham bir tür stringini normalize eder. Pipeline sırası:
     /// <list type="number">
-    ///   <item>Yazar koruma tablosu — korunan yazar varsa kesin döner (Romance override engellenmiş)</item>
+    ///   <item>Yazar koruma tablosu — korunan yazar varsa kesin döner</item>
     ///   <item>Romance sinyal tespiti (genre + description)</item>
     ///   <item>Birleştirme (merge) kuralları</item>
-    ///   <item>Blacklist → fallback</item>
+    ///   <item>Blacklist → fallback ("Fiction")</item>
     ///   <item>Geçerliyse raw genre döner</item>
     /// </list>
     /// </summary>
@@ -102,10 +152,10 @@ internal static class GenreNormalizer
     internal static string Normalize(
         string?  rawGenre,
         string?  description = null,
-        string   fallback    = "General",
+        string   fallback    = "Fiction",
         string?  author      = null)
     {
-        // 0. Yazar koruma: bu yazarlar için sabit tür döner, Romance override çalışmaz
+        // 0. Yazar koruma: bu yazarlar için sabit tür döner, sinyal override çalışmaz
         if (!string.IsNullOrWhiteSpace(author))
         {
             var protectedGenre = ResolveProtectedGenre(author);
@@ -123,7 +173,7 @@ internal static class GenreNormalizer
 
         // 3. Blacklist veya boş → fallback
         if (string.IsNullOrWhiteSpace(rawGenre) || Blacklist.Contains(rawGenre!))
-            return string.IsNullOrWhiteSpace(fallback) ? "General" : fallback;
+            return string.IsNullOrWhiteSpace(fallback) ? "Fiction" : fallback;
 
         return rawGenre!;
     }
