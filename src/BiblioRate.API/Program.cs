@@ -175,6 +175,10 @@ using (var scope = app.Services.CreateScope())
 
     var dataSeeder = scope.ServiceProvider.GetRequiredService<DataSeederService>();
     await dataSeeder.SeedAsync();
+
+    // NOT: Veritabanı temizleme (deduplication + kategori normalizasyonu) artık
+    // startup'ta otomatik çalışmaz. Tek seferlik çalıştırmak için:
+    // POST /api/admin/cleanup  (AdminController)
 }
 
 app.MapControllers();

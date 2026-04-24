@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BiblioRate.Application.Interfaces;
 using BiblioRate.Domain.Entities;
@@ -16,18 +19,31 @@ public class RatingsController : ControllerBase
         _ratingRepository = ratingRepository;
     }
 
-    /// <summary>Bir kitaba puan verir. Aynı kullanıcı aynı kitabı tekrar puanlayamaz.</summary>
+    /// <summary>
+    /// Giriş yapmış kullanıcı adına bir kitaba puan verir.
+    /// UserId, request body'den değil JWT token'dan (sub claim) okunur.
+    /// Aynı kullanıcı aynı kitabı tekrar puanlayamaz (DB UNIQUE kısıtı).
+    /// </summary>
     // POST api/ratings
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> AddRating([FromBody] CreateRatingRequest request)
     {
+        // JWT token'ından kullanıcı kimliğini güvenli şekilde çek
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new { message = "Geçersiz token: kullanıcı kimliği bulunamadı." });
+
+        // Aynı kullanıcı bu kitabı daha önce puanladı mı?
         var existing = await _ratingRepository.GetRatingsByBookIdAsync(request.BookId);
-        if (existing.Any(r => r.UserId == request.UserId))
-            return Conflict("Bu kitabı zaten puanladınız.");
+        if (existing.Any(r => r.UserId == userId))
+            return Conflict(new { message = "Bu kitabı zaten puanladınız." });
 
         var rating = new Rating
         {
-            UserId    = request.UserId,
+            UserId    = userId,
             BookId    = request.BookId,
             Score     = request.Score,
             CreatedAt = DateTime.UtcNow
@@ -45,7 +61,7 @@ public class RatingsController : ControllerBase
         });
     }
 
-    /// <summary>Bir kitabın ortalama puanını döner.</summary>
+    /// <summary>Bir kitabın ortalama puanını döner. Kimlik doğrulama gerektirmez.</summary>
     // GET api/ratings/average/{bookId}
     [HttpGet("average/{bookId:int}")]
     public async Task<IActionResult> GetAverageScore(int bookId)

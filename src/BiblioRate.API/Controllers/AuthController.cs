@@ -1,5 +1,9 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using BiblioRate.Application.DTOs;
 using BiblioRate.Application.Interfaces;
+using BiblioRate.Domain.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BiblioRate.API.Controllers;
@@ -47,6 +51,37 @@ public class AuthController : ControllerBase
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Giriş yapmış kullanıcının profil bilgilerini günceller.
+    /// Username, Bio ve AvatarUrl alanları kısmen veya tamamen gönderilebilir;
+    /// null bırakılan alanlar değişmez.
+    /// </summary>
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        // JWT token'ındaki sub claim'den userId'yi çıkar
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                          ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new { message = "Geçersiz token: kullanıcı kimliği bulunamadı." });
+
+        try
+        {
+            var result = await _authService.UpdateProfileAsync(userId, request);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 }

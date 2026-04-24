@@ -14,6 +14,10 @@ public class User
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Profil alanları — PUT /api/auth/profile ile güncellenebilir
+    public string? Bio       { get; set; }
+    public string? AvatarUrl { get; set; }
+
     // Navigation properties
     public ICollection<Rating>    Ratings    { get; set; } = [];
     public ICollection<Review>    Reviews    { get; set; } = [];

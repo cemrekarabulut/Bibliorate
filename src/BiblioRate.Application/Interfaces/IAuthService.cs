@@ -19,4 +19,11 @@ public interface IAuthService
     /// </summary>
     /// <returns>Kullanıcı bilgileri + geçerli JWT token.</returns>
     Task<AuthResponseDto> LoginAsync(UserLoginDto request);
+
+    /// <summary>
+    /// Giriş yapmış kullanıcının profil bilgilerini günceller.
+    /// userId JWT token'ındaki sub claim'den çekilir.
+    /// </summary>
+    /// <returns>Güncellenmiş kullanıcı bilgileri (token içermez).</returns>
+    Task<AuthResponseDto> UpdateProfileAsync(int userId, UpdateProfileRequest request);
 }

@@ -16,12 +16,6 @@ public class GoogleBooksService : IGoogleBooksService
         PropertyNameCaseInsensitive = true
     };
 
-    // Google'dan "Fiction", "General" gibi jenerik kategori gelirse authorGenre sözlüğü devreye girer
-    private static readonly HashSet<string> GenericGenres = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Fiction", "General", "General Fiction", "Literary Fiction",
-        "English Fiction", "American Fiction"
-    };
 
     public GoogleBooksService(HttpClient httpClient)
     {
@@ -48,18 +42,14 @@ public class GoogleBooksService : IGoogleBooksService
 
             // ── Yardımcı fonksiyonlar ─────────────────────────────────────────
 
-            // ── ResolveGenre: Akıllı tür belirleme ────────────────────────────────────
-            // Google spesifik bir kategori verdiyse ("Vampire", "Space Opera" vb.) koru.
-            // "Fiction"/"General"/null gelirse authorGenre sözlük değerini kullan.
+            // ── ResolveGenre: GenreNormalizer üzerinden akıllı tür belirleme ────────────
+            // Yazar koruma tablosu → Romance override engeli → merge → blacklist pipeline
+            // authorName, korunan yazar tespiti için ResolveFromCategories'e iletilir.
             string ResolveGenre(VolumeInfo v)
             {
-                if (v.Categories is { Count: > 0 })
-                {
-                    var first = v.Categories[0].Trim();
-                    if (!string.IsNullOrWhiteSpace(first) && !GenericGenres.Contains(first))
-                        return first;
-                }
-                return authorGenre;
+                var authors = v.Authors is { Count: > 0 } ? string.Join(", ", v.Authors) : authorName;
+                return GenreNormalizer.ResolveFromCategories(
+                    v.Categories, v.Description, authorGenre, author: authors);
             }
 
             static int ResolveYear(string? publishedDate)
@@ -127,8 +117,13 @@ public class GoogleBooksService : IGoogleBooksService
                         return null;
                     }
 
-                    // Açıklama — kısa veya eksikse boş bırak, kitabı reddetme
+                    // Açıklama zorunlu — 50 karakterden kısa veya boş ise kitabı reddet
                     var description = v.Description?.Trim() ?? string.Empty;
+                    if (description.Length < 50)
+                    {
+                        Console.WriteLine($"[Skip] \"{v.Title}\" - Sebep: Açıklama çok kısa veya eksik ({description.Length} karakter)");
+                        return null;
+                    }
 
                     // Yayınlanma tarihi
                     var publishedAt = DateTime.UtcNow;
@@ -136,10 +131,25 @@ public class GoogleBooksService : IGoogleBooksService
                         DateTime.TryParse(v.PublishedDate, out var parsed))
                         publishedAt = parsed;
 
-                    // ISBN — boşsa benzersiz placeholder
-                    var isbn = v.IndustryIdentifiers?.FirstOrDefault()?.Identifier;
+                    // ISBN — ISBN-13 tercih edilir, yoksa ISBN-10, yoksa benzersiz placeholder
+                    var isbn = v.IndustryIdentifiers
+                        ?.FirstOrDefault(x => x.Type.Equals("ISBN_13", StringComparison.OrdinalIgnoreCase))
+                        ?.Identifier
+                        ?? v.IndustryIdentifiers
+                            ?.FirstOrDefault(x => x.Type.Equals("ISBN_10", StringComparison.OrdinalIgnoreCase))
+                            ?.Identifier;
                     if (string.IsNullOrWhiteSpace(isbn))
                         isbn = $"ISBN_MISSING_{item.Id}";
+
+                    var thumbnailUrl = ResolveThumbnail(v.ImageLinks?.Thumbnail, isbn);
+
+                    // Görsel kalite guard: gerçek kapak bulunamadıysa kitabı reddet
+                    // ResolveThumbnail placehold.co döndürüyorsa OpenLibrary da başarısız demektir
+                    if (thumbnailUrl.Contains("placehold.co", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.WriteLine($"[Skip] \"{v.Title}\" - Sebep: Gerçek kapak görseli bulunamadı");
+                        return null;
+                    }
 
                     return new Book
                     {
@@ -151,7 +161,7 @@ public class GoogleBooksService : IGoogleBooksService
                         Year         = ResolveYear(v.PublishedDate),
                         Isbn         = isbn,
                         Description  = description,
-                        ThumbnailUrl = v.ImageLinks?.Thumbnail ?? string.Empty,
+                        ThumbnailUrl = thumbnailUrl,
                         PublishedAt  = publishedAt,
                         GoogleBookId = string.IsNullOrWhiteSpace(item.Id) ? null : item.Id
                     };
@@ -177,6 +187,89 @@ public class GoogleBooksService : IGoogleBooksService
             Console.WriteLine($"[SearchBooksAsync Hatası] {ex.Message}");
             return [];
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Thumbnail URL İşleme — Fallback Zinciri
+    // ──────────────────────────────────────────────────────────────────────────
+
+    // Google'ın gerçek görsel yerine döndürdüğü 'boş/kötü' URL parçaları
+    private static readonly string[] BadThumbnailSignals =
+    [
+        "static.googleusercontent.com",  // gerçek kapak değil, genel placeholder
+        "books.google.com/books?id=",     // kapak yok, genel kitap sayfası — görsel URL değil
+        "img1.doubanio.com",              // Çin kaynağı, kapak değil
+        "imnotabook",                     // Google'a özel 'görsel yok' işareti
+        "no_cover",                       // açık 'kapağ yok' etiketi
+        "missing_cover",                  // açık 'eksik kapak' etiketi
+        "fife.googleusercontent.com",     // pikselli arka plan görselleri
+    ];
+
+    /// <summary>
+    /// Thumbnail URL çözümleme zinciri:
+    /// <list type="number">
+    ///   <item>Google URL geçerliyse SanitizeThumbnail ile temizle.</item>
+    ///   <item>URL null/boş veya 'kötü' domain içeriyorsa OpenLibrary'den ISBN ile kapak dene.</item>
+    ///   <item>ISBN placeholder ise veya ISBN_MISSING ise direkt son placeholder'a düş.</item>
+    ///   <item>Hiçbiri yoksa profesyonel placehold.co döner.</item>
+    /// </list>
+    /// </summary>
+    internal static string ResolveThumbnail(string? rawGoogleUrl, string isbn)
+    {
+        var isBadOrMissing = string.IsNullOrWhiteSpace(rawGoogleUrl)
+            || BadThumbnailSignals.Any(sig =>
+                rawGoogleUrl!.Contains(sig, StringComparison.OrdinalIgnoreCase));
+
+        if (!isBadOrMissing)
+            return SanitizeThumbnail(rawGoogleUrl); // Google URL iyiyse sanitize edip dön
+
+        // ISBN gerçekse OpenLibrary'den dene
+        var cleanIsbn = isbn?.Trim();
+        if (!string.IsNullOrWhiteSpace(cleanIsbn) &&
+            !cleanIsbn.StartsWith("ISBN_MISSING", StringComparison.OrdinalIgnoreCase))
+        {
+            var openLibraryUrl = $"https://covers.openlibrary.org/b/isbn/{cleanIsbn}-L.jpg";
+            Console.WriteLine($"[Thumbnail] Google görseli yok/kötü → OpenLibrary deneniyor: {openLibraryUrl}");
+            return openLibraryUrl;
+        }
+
+        // Son çare: placehold.co
+        return "https://placehold.co/128x192/1a1a2e/e0e0e0?text=No+Cover";
+    }
+
+    /// <summary>
+    /// Ham Google Books thumbnail URL'ini Smart Sanitize ile temizler:
+    /// <list type="bullet">
+    ///   <item>OpenLibrary URL'lerine (covers.openlibrary.org) zoom/edge değişikliği YAPILMAZ.</item>
+    ///   <item>Google URL'leri: zoom=1 → zoom=2, &amp;edge=curl kaldır, http → https.</item>
+    ///   <item>Boş/null URL → placehold.co döner.</item>
+    /// </list>
+    /// </summary>
+    internal static string SanitizeThumbnail(string? raw)
+    {
+        const string Placeholder =
+            "https://placehold.co/128x192/1a1a2e/e0e0e0?text=No+Cover";
+
+        if (string.IsNullOrWhiteSpace(raw))
+            return Placeholder;
+
+        var url = raw.Trim();
+
+        // 1. http → https (her kaynak için zorunlu)
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            url = "https://" + url["http://".Length..];
+
+        // 2. OpenLibrary URL'lerine zoom/edge manipülasyonu yapma
+        if (url.Contains("covers.openlibrary.org", StringComparison.OrdinalIgnoreCase))
+            return url;
+
+        // 3. Yalnızca Google URL'leri için: zoom=1 → zoom=2
+        url = url.Replace("zoom=1", "zoom=2", StringComparison.OrdinalIgnoreCase);
+
+        // 4. &edge=curl kaldır (kıvrık köşe efekti)
+        url = url.Replace("&edge=curl", string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        return url;
     }
 }
 

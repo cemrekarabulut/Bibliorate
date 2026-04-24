@@ -19,12 +19,21 @@ public class BookDto
     [JsonPropertyName("thumbnailUrl")]
     public string ThumbnailUrl { get; set; } = string.Empty;
 
+    /// <summary>Mevcut alan adı — geriye uyumluluk için korundu.</summary>
     [JsonPropertyName("ratingAvg")]
     public double RatingAvg { get; set; }
+
+    /// <summary>Frontend'in beklediği alan adı (averageRating).</summary>
+    [JsonPropertyName("averageRating")]
+    public double AverageRating { get; set; }
 
     [JsonPropertyName("ratingCount")]
     public int RatingCount { get; set; }
 
     [JsonPropertyName("categories")]
     public List<string> Categories { get; set; } = [];
+
+    /// <summary>Frontend'in beklediği tür alanı (genre).</summary>
+    [JsonPropertyName("genre")]
+    public string Genre { get; set; } = string.Empty;
 }

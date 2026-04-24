@@ -14,6 +14,7 @@ namespace BiblioRate.Infrastructure.Services;
 /// IAuthService implementasyonu.
 /// - Register: BCrypt ile hash'leyerek kullanıcı kaydeder.
 /// - Login:    Hash doğrulaması yapıp JWT token üretir.
+/// - UpdateProfile: Giriş yapan kullanıcının profil bilgilerini günceller.
 /// </summary>
 public class AuthService : IAuthService
 {
@@ -76,6 +77,43 @@ public class AuthService : IAuthService
             Username = user.Username,
             Email    = user.Email,
             Token    = token
+        };
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // UpdateProfile
+    // ──────────────────────────────────────────────────────────────────────────
+    public async Task<AuthResponseDto> UpdateProfileAsync(int userId, UpdateProfileRequest request)
+    {
+        var user = await _userRepository.GetByIdAsync(userId)
+            ?? throw new KeyNotFoundException("Kullanıcı bulunamadı.");
+
+        // Yeni username talep edildiyse çakışma kontrolü yap
+        if (!string.IsNullOrWhiteSpace(request.Username) &&
+            !string.Equals(user.Username, request.Username.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            var exists = await _userRepository.UserExistsAsync(request.Username.Trim(), string.Empty);
+            if (exists)
+                throw new InvalidOperationException("Bu kullanıcı adı zaten kullanımda.");
+
+            user.Username = request.Username.Trim();
+        }
+
+        // Null olmayan alanları güncelle; null gelen alanlar mevcut değerini korur
+        if (request.Bio is not null)
+            user.Bio = request.Bio;
+
+        if (request.AvatarUrl is not null)
+            user.AvatarUrl = request.AvatarUrl;
+
+        await _userRepository.UpdateProfileAsync(user);
+
+        return new AuthResponseDto
+        {
+            UserId   = user.Id.ToString(),
+            Username = user.Username,
+            Email    = user.Email
+            // Token = null → Profil güncelleme yeni token gerektirmez
         };
     }
 

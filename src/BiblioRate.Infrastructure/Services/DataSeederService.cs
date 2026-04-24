@@ -127,19 +127,19 @@ public class DataSeederService
 
     /// <summary>
     /// Yazar → Tür eşleşmesi. Google 'Fiction' veya 'General' dönerse bu sözlük devreye girer.
+    /// GenreNormalizer.AuthorProtectedGenres ile senkronize tutulur.
     /// </summary>
-    private static readonly Dictionary<string, string> AuthorGenreMap = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string> AuthorGenreMap =
+        new(StringComparer.OrdinalIgnoreCase)
     {
-        // Mystery
-        ["Agatha Christie"]      = "Mystery",
-        ["Arthur Conan Doyle"]   = "Mystery",
-
-        // Thriller
-        ["Tess Gerritsen"]       = "Thriller",
-        ["Dan Brown"]            = "Thriller",
-        ["Riley Sager"]          = "Thriller",
-        ["Linwood Barclay"]      = "Thriller",
-        ["Gillian Flynn"]        = "Thriller",
+        // Mystery & Thriller
+        ["Agatha Christie"]      = "Mystery & Thriller",
+        ["Arthur Conan Doyle"]   = "Mystery & Thriller",
+        ["Tess Gerritsen"]       = "Mystery & Thriller",
+        ["Dan Brown"]            = "Mystery & Thriller",
+        ["Riley Sager"]          = "Mystery & Thriller",
+        ["Linwood Barclay"]      = "Mystery & Thriller",
+        ["Gillian Flynn"]        = "Mystery & Thriller",
 
         // Psychological Thriller
         ["Freida McFadden"]      = "Psychological Thriller",
@@ -156,20 +156,22 @@ public class DataSeederService
         // Horror
         ["Stephen King"]         = "Horror",
 
+        // Romance
+        ["Jane Austen"]          = "Romance",
+        ["Emily Bronte"]         = "Romance",
+
         // Classic
-        ["Jane Austen"]          = "Classic",
-        ["Charles Dickens"]      = "Classic",
         ["Oscar Wilde"]          = "Classic",
         ["Victor Hugo"]          = "Classic",
         ["Herman Melville"]      = "Classic",
-        ["Emily Bronte"]         = "Classic",
         ["F. Scott Fitzgerald"]  = "Classic",
         ["Mark Twain"]           = "Classic",
 
-        // Philosophy
-        ["Dostoyevsky"]          = "Philosophy",
-        ["Stefan Zweig"]         = "Philosophy",
-        ["Irvin D. Yalom"]       = "Philosophy",
+        // Classics & Philosophy (GenreNormalizer.AuthorProtectedGenres ile eşleşir)
+        ["Charles Dickens"]      = "Classics & Philosophy",
+        ["Stefan Zweig"]         = "Classics & Philosophy",
+        ["Dostoyevsky"]          = "Classics & Philosophy",
+        ["Irvin D. Yalom"]       = "Classics & Philosophy",
 
         // Drama
         ["John Steinbeck"]       = "Drama",
@@ -193,9 +195,19 @@ public class DataSeederService
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
-        // Mevcut kitapları yükle — duplikat kontrolü için ve kaldığı yerden devam etmek için
-        var existingBooks = await _context.Books.ToListAsync(cancellationToken);
-        Console.WriteLine($"[Seeder] Veritabanında {existingBooks.Count} kitap mevcut. Eksikler tamamlanıyor...");
+        // ── Erken çıkış: Veritabanında en az 1 kitap varsa seed'i tamamen atla ──
+        // Kitap sayısını COUNT(*) ile çek — tüm satırları belleğe yükleme
+        var bookCount = await _context.Books.CountAsync(cancellationToken);
+
+        if (bookCount > 0)
+        {
+            Console.WriteLine($"[Seeder] Veritabanında {bookCount} kitap mevcut. Seed atlanıyor.");
+            return;
+        }
+
+        // Yalnızca DB tamamen boşsa buraya ulaşılır
+        Console.WriteLine("[Seeder] Veritabanı boş. Google Books API üzerinden kitaplar yükleniyor...");
+        var existingBooks = new List<Book>();
 
         foreach (var bookQuery in BookQueries)
         {
@@ -223,25 +235,362 @@ public class DataSeederService
 
             foreach (var fetchedBook in fetchedBooks)
             {
+                // ── Sıkı Giriş Denetimi (The Great Guard) ──────────────────────
+                // Kural 1: ISBN/Başlık+Yazar bazlı kesin kopya
                 if (BookExists(existingBooks, fetchedBook))
+                {
+                    Console.WriteLine($"[Guard] Atlandı (mevcut): \"{fetchedBook.Title}\"");
                     continue;
+                }
 
-                Console.WriteLine($"[Attempting to Save] {fetchedBook.Title}");
+                // Kural 2: Fuzzy başlık kopyası — "A" kitabının başlığı mevcut "B" kitabının
+                // içinde geçiyor ya da tersi (örn. "1984" ↔ "1984 Large Print")
+                var normCandidate = NormTitle(fetchedBook.Title);
+                var fuzzyDuplicate = existingBooks.Any(ex =>
+                {
+                    var normEx = NormTitle(ex.Title);
+                    return normEx == normCandidate ||
+                           normEx.Contains(normCandidate, StringComparison.Ordinal) ||
+                           normCandidate.Contains(normEx, StringComparison.Ordinal);
+                });
+                if (fuzzyDuplicate)
+                {
+                    Console.WriteLine($"[Guard] Atlandı (fuzzy kopya): \"{fetchedBook.Title}\"");
+                    continue;
+                }
+
+                // Kural 3: Açıklama eksik veya çok kısa (GoogleBooksService'ten geçmişse
+                // bu kontrol sağlanmış olmalı, ama ikinci savunma hattı)
+                if (string.IsNullOrWhiteSpace(fetchedBook.Description) ||
+                    fetchedBook.Description.Length < 50)
+                {
+                    Console.WriteLine($"[Guard] Atlandı (kısa açıklama): \"{fetchedBook.Title}\"");
+                    continue;
+                }
+
+                // Kural 4: Görsel kalitesi (placehold.co = gerçek kapak yok)
+                if (string.IsNullOrWhiteSpace(fetchedBook.ThumbnailUrl) ||
+                    fetchedBook.ThumbnailUrl.Contains("placehold.co", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[Guard] Atlandı (görsel yok): \"{fetchedBook.Title}\"");
+                    continue;
+                }
+
+                // Tüm denetimlerden geçti — kaydet
+                Console.WriteLine($"[Save] \"{fetchedBook.Title}\" - {fetchedBook.Author} (Genre: {fetchedBook.Genre})");
                 await _bookRepository.AddBookAsync(fetchedBook);
                 existingBooks.Add(fetchedBook);
-                Console.WriteLine($"[Saved] {fetchedBook.Title} - {fetchedBook.Author} (Genre: {fetchedBook.Genre})");
             }
         }
         catch (Exception ex)
         {
-            // 503 veya diğer hatalarda uygulamanın çökmesini engeller, log yazar ve beklemeye geçer
             Console.WriteLine($"[Error] {query} aranırken bir sorun oluştu: {ex.Message}");
         }
 
-        // --- RATE LIMIT GÜNCELLEMESİ ---
-        // Google'ın IP banlamasını önlemek için 10 saniye bekliyoruz.
-        Console.WriteLine($"[Wait] Google API'yi dinlendirmek için 10 saniye bekleniyor...");
+        // Google rate-limit: 10 saniye bekle
+        Console.WriteLine("[Wait] Google API'yi dinlendirmek için 10 saniye bekleniyor...");
         await Task.Delay(10000, cancellationToken);
+    }
+
+    // Başlık normalizasyonu — fuzzy karşılaştırma için yardımcı (ProcessSearchAsync içi)
+    private static string NormTitle(string? t) =>
+        string.IsNullOrWhiteSpace(t)
+            ? string.Empty
+            : new string(t.ToLowerInvariant()
+                          .Where(c => char.IsLetterOrDigit(c) || c == ' ')
+                          .ToArray()).Trim();
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Mevcut Kitap Kategori Güncellemesi + Akıllı Tekilleştirme
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Veritabanını iki aşamada süpürür:
+    /// <list type="number">
+    ///   <item>
+    ///     <b>Fuzzy Deduplication</b> — tam eşleşmenin yanı sıra "A başlığı B'nin içinde geçiyorsa"
+    ///     (ör. "1984" ve "1984 Large Print") aynı grup sayılır. Her gruptan en güçlü kaydı tutar,
+    ///     kalanları kalıcı olarak siler.
+    ///   </item>
+    ///   <item>
+    ///     <b>Genre Normalizasyonu</b> — yazar koruma tablosu, Romance tespiti, merge kuralları ve
+    ///     blacklist pipeline'ına göre Genre alanını günceller.
+    ///   </item>
+    /// </list>
+    /// Her startup'ta çalışır; idempotent — ikinci çalışmada silinecek/değişecek kayıt kalmaz.
+    /// </summary>
+    public async Task UpdateExistingCategoriesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var books = await _context.Books
+            .Include(b => b.Ratings)
+            .Include(b => b.Reviews)
+            .Include(b => b.Favorites)
+            .ToListAsync(cancellationToken);
+
+        var initialCount = books.Count;
+        Console.WriteLine($"[Cleanup] ══════════════════════════════════════");
+        Console.WriteLine($"[Cleanup] Başlangıç: {initialCount} kitap.");
+        Console.WriteLine($"[Cleanup] ══════════════════════════════════════");
+
+        // ── Aşama 0: Radikal Temizlik (Purge) ────────────────────────────────
+        // Açıklaması çok kısa veya gerçek kapak görseli olmayan kayıtları sil.
+        // Bu kontrol deduplication'dan önce yapılır; eğer bir kopyanın HEPSI kötüyse
+        // hepsi silinir — hiçbiri kazanıcı olamaz.
+        var poorQualityBooks = books
+            .Where(b =>
+                b.Description.Length < 50 ||
+                !IsGoodThumbnail(b.ThumbnailUrl))
+            .ToList();
+
+        if (poorQualityBooks.Count > 0)
+        {
+            Console.WriteLine($"[Purge] {poorQualityBooks.Count} düşük kaliteli kayıt siliniyor...");
+            _context.Books.RemoveRange(poorQualityBooks);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            foreach (var poor in poorQualityBooks)
+            {
+                var reason = poor.Description.Length < 50 ? $"kısa açıklama ({poor.Description.Length} karakter)"
+                                                           : "bozuk/sahte görsel";
+                Console.WriteLine($"[Purge] ✗ Silindi: \"{poor.Title}\" (Sebep: {reason})");
+            }
+
+            Console.WriteLine($"[Purge] Toplam {poorQualityBooks.Count} kayıt silindi.");
+            books = await _context.Books.ToListAsync(cancellationToken);
+        }
+        else
+        {
+            Console.WriteLine("[Purge] Tüm kayıtlar kalite kriterlerini karşılıyor.");
+        }
+
+        // ── Aşama 1: Fuzzy Deduplication ─────────────────────────────────────
+        var booksToDelete = BuildFuzzyDuplicateDeleteList(books);
+
+        if (booksToDelete.Count > 0)
+        {
+            Console.WriteLine($"[Dedup] {booksToDelete.Count} duplikat kayıt siliniyor...");
+            _context.Books.RemoveRange(booksToDelete);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            foreach (var deleted in booksToDelete)
+                Console.WriteLine($"[Dedup] ✗ Silindi: \"{deleted.Title}\" (ID:{deleted.BookId}, Yazar:{deleted.Author})");
+
+            Console.WriteLine($"[Dedup] Toplam {booksToDelete.Count} kayıt silindi. Kalan: {books.Count - booksToDelete.Count}");
+            books = await _context.Books.ToListAsync(cancellationToken);
+        }
+        else
+        {
+            Console.WriteLine("[Dedup] Duplikat bulunamadı.");
+        }
+
+        // ── Aşama 2: Genre Normalizasyonu ─────────────────────────────────────
+        var updatedCount = 0;
+
+        foreach (var book in books)
+        {
+            var newGenre = DetermineUpdatedGenre(book);
+            if (string.Equals(book.Genre, newGenre, StringComparison.Ordinal)) continue;
+
+            Console.WriteLine($"[Genre] \"{book.Title}\" {book.Genre} ⟹ {newGenre}");
+            book.Genre = newGenre;
+            updatedCount++;
+        }
+
+        if (updatedCount > 0)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            Console.WriteLine($"[Genre] {updatedCount} kitabın türü güncellendi.");
+        }
+        else
+        {
+            Console.WriteLine("[Genre] Tüm türler güncel, değişiklik yok.");
+        }
+
+        var totalDeleted = poorQualityBooks.Count + booksToDelete.Count;
+        Console.WriteLine($"[Cleanup] ══ Tamamlandı ══");
+        Console.WriteLine($"[Cleanup]    Silinen  : {totalDeleted} kayıt");
+        Console.WriteLine($"[Cleanup]    Güncellenen: {updatedCount} tür");
+        Console.WriteLine($"[Cleanup]    Kalan    : {books.Count} kitap");
+        Console.WriteLine($"[Cleanup] ═══════════════");
+    }
+
+    // ── Fuzzy Deduplication Çekirdeği ────────────────────────────────────────
+
+    /// <summary>
+    /// Fuzzy başlık eşleştirmesiyle duplikat grupları oluşturur ve her gruptan
+    /// "en güçlü" kaydı (Survival of the Fittest) koruyarak silinecek listesi döner.
+    /// <para>
+    /// Eşleştirme mantığı: normalize(A).Contains(normalize(B)) || normalize(B).Contains(normalize(A))
+    /// Bu kural "1984" ve "1984 Large Print Edition" gibi varyantları aynı gruba alır.
+    /// </para>
+    /// </summary>
+    private static List<Book> BuildFuzzyDuplicateDeleteList(List<Book> allBooks)
+    {
+        // Union-Find benzeri yaklaşım: her kitabı bir gruba at
+        // Küçük veri setleri (≤500 kitap) için O(n²) yeterince hızlı
+        var groupId = new Dictionary<int, int>(); // bookId → groupLeaderId
+        var processed = new HashSet<int>();
+
+        foreach (var book in allBooks)
+        {
+            if (processed.Contains(book.BookId)) continue;
+
+            // Bu kitabı kendi grubunun lideri yap
+            groupId[book.BookId] = book.BookId;
+            processed.Add(book.BookId);
+
+            var normA = NormalizeTitle(book.Title);
+
+            foreach (var other in allBooks)
+            {
+                if (other.BookId == book.BookId) continue;
+
+                var normB = NormalizeTitle(other.Title);
+
+                // Fuzzy eşleşme: biri diğerinin içinde mi?
+                bool fuzzyMatch =
+                    normA == normB ||                       // tam eşleşme
+                    normA.Contains(normB, StringComparison.Ordinal) ||
+                    normB.Contains(normA, StringComparison.Ordinal);
+
+                if (fuzzyMatch)
+                {
+                    // other'ı bu gruba bağla
+                    if (!groupId.ContainsKey(other.BookId))
+                        groupId[other.BookId] = book.BookId;
+
+                    processed.Add(other.BookId);
+                }
+            }
+        }
+
+        // groupLeaderId → kitap listesi
+        var groups = allBooks
+            .GroupBy(b => groupId.TryGetValue(b.BookId, out var gid) ? gid : b.BookId)
+            .Where(g => g.Count() > 1)
+            .ToList();
+
+        var toDelete = new List<Book>();
+
+        foreach (var group in groups)
+        {
+            var winner = SelectWinner(group.ToList());
+            var losers = group.Where(b => b.BookId != winner.BookId);
+
+            Console.WriteLine($"[Dedup] Grup ({group.Count()} kayıt) → Kazanıcı: \"{winner.Title}\" (ID:{winner.BookId})");
+            toDelete.AddRange(losers);
+        }
+
+        return toDelete;
+    }
+
+    /// <summary>
+    /// Grup içinden en güçlü kaydı seçer — Survival of the Fittest:
+    /// <list type="number">
+    ///   <item>Kaliteli görseli olan kitaplar aralarında en uzun açıklamalı olanı kazanır.</item>
+    ///   <item>Hepsinin görseli kötüyse en uzun açıklamalı olanı kazanır.</item>
+    /// </list>
+    /// </summary>
+    private static Book SelectWinner(List<Book> candidates)
+    {
+        var withGoodCover = candidates
+            .Where(b => IsGoodThumbnail(b.ThumbnailUrl))
+            .OrderByDescending(b => b.Description?.Length ?? 0)
+            .ToList();
+
+        return withGoodCover.Count > 0
+            ? withGoodCover[0]
+            : candidates.OrderByDescending(b => b.Description?.Length ?? 0).First();
+    }
+
+    /// <summary>
+    /// Thumbnail URL'inin gerçek/kaliteli bir kapak görseline işaret edip etmediğini kontrol eder.
+    /// placehold.co, ISBN_MISSING, http:// ve bilinen kötü domain'ler reddedilir.
+    /// </summary>
+    private static bool IsGoodThumbnail(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+
+        // Placeholder veya eksik görsel işaretleri
+        if (url.Contains("placehold.co",              StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.StartsWith("ISBN_MISSING",             StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.StartsWith("http://",                  StringComparison.OrdinalIgnoreCase)) return false;
+
+        // Google'ın bilinen kötü thumbnail domain'leri
+        if (url.Contains("static.googleusercontent.com", StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.Contains("fife.googleusercontent.com",   StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.Contains("imnotabook",                    StringComparison.OrdinalIgnoreCase)) return false;
+        if (url.Contains("no_cover",                      StringComparison.OrdinalIgnoreCase)) return false;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Başlığı fuzzy karşılaştırma için normalize eder:
+    /// küçük harf, boşluklar sıkıştırılır, noktalama kaldırılır.
+    /// </summary>
+    private static string NormalizeTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return string.Empty;
+
+        return new string(
+                title
+                    .ToLowerInvariant()
+                    .Where(c => char.IsLetterOrDigit(c) || c == ' ')
+                    .ToArray())
+            .Replace("  ", " ")
+            .Trim();
+    }
+
+    /// <summary>
+    /// Mevcut bir kitap için yeni genre değerini belirler. Pipeline:
+    /// <list type="number">
+    ///   <item>Description'da Romance sinyali → "Romance"</item>
+    ///   <item>Mevcut genre'de Romance sinyali → "Romance"</item>
+    ///   <item>Merge kuralı eşleşmesi (Thriller, Crime vb.)</item>
+    ///   <item>Güncel AuthorGenreMap'ten yazar eşleşmesi</item>
+    ///   <item>Mevcut genre blacklist'te değilse koru, yoksa "General"</item>
+    /// </list>
+    /// </summary>
+    private string DetermineUpdatedGenre(Book book)
+    {
+        // 0. Yazar koruma tablosu — bu yazarlar için kesin tür döner, Romance override engellidir
+        var protectedGenre = GenreNormalizer.ResolveProtectedGenre(book.Author);
+        if (protectedGenre is not null) return protectedGenre;
+
+        // 1. Description'da romance sinyali
+        if (GenreNormalizer.HasRomanceSignal(book.Description))
+            return "Romance";
+
+        // 2. Mevcut genre'de romance sinyali
+        if (GenreNormalizer.HasRomanceSignal(book.Genre))
+            return "Romance";
+
+        // 3. Merge kuralları — Crime/Thriller/Detective vb.
+        var merged = GenreNormalizer.TryMerge(book.Genre);
+        if (merged is not null) return merged;
+
+        // 4. AuthorGenreMap'ten güncel eşleşme (Jane Austen artık Romance, Dickens Classics&Philosophy)
+        var fromAuthor = ResolveAuthorGenre(book.Author);
+        if (fromAuthor != "General") return fromAuthor;
+
+        // 5. Mevcut genre geçerliyse koru, blacklist'teyse General'e düş
+        return GenreNormalizer.IsBlacklisted(book.Genre) ? "General" : book.Genre;
+    }
+
+    /// <summary>
+    /// Kitabın yazarını AuthorGenreMap ile karşılaştırır.
+    /// Yazar birden fazla isim içerebileceğinden Contains kontrolü kullanılır.
+    /// </summary>
+    private static string ResolveAuthorGenre(string author)
+    {
+        foreach (var (key, genre) in AuthorGenreMap)
+        {
+            if (author.Contains(key, StringComparison.OrdinalIgnoreCase))
+                return genre;
+        }
+        return "General";
     }
 
     private static bool BookExists(IEnumerable<Book> existingBooks, Book candidate)
