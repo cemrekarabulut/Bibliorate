@@ -15,10 +15,13 @@ def get_db():
         2. Gerçek değerleri doldurun
         3. .env dosyasını asla git'e commit etmeyin!
     """
+    ssl_enabled = os.environ.get("DB_SSL", "false").lower() == "true"
+
     return mysql.connector.connect(
-        host     = os.environ.get("DB_HOST",     "localhost"),
-        port     = int(os.environ.get("DB_PORT", "3306")),
-        user     = os.environ.get("DB_USER",     "root"),
-        password = os.environ.get("DB_PASSWORD", ""),
-        database = os.environ.get("DB_NAME",     "bibliorate")
+        host         = os.environ.get("DB_HOST",     "localhost"),
+        port         = int(os.environ.get("DB_PORT", "3306")),
+        user         = os.environ.get("DB_USER",     "root"),
+        password     = os.environ.get("DB_PASSWORD", ""),
+        database     = os.environ.get("DB_NAME",     "bibliorate"),
+        ssl_disabled = not ssl_enabled
     )
