@@ -3,14 +3,17 @@
  * ------------
  * Facade Pattern implementation that provides a single, unified interface
  * for the React frontend to communicate with:
- *   - The C# .NET 8 REST API  (http://localhost:5105)
- *   - Analytics endpoints forwarded through the same API from Flask
+ *   - The C# .NET 8 REST API  (VITE_API_URL, default: http://localhost:5001)
+ *   - The Python Flask analytics microservice (VITE_FLASK_URL, default: http://localhost:5000)
  *
  * All components import { apiFacade } — they never touch fetch/headers directly.
- * Swapping the base URL is the only change needed for staging / production.
+ * Base URLs are read from environment variables (.env / Docker --build-arg) so
+ * no code changes are needed between local, staging, and production environments.
  */
 
-const API_BASE_URL = 'http://localhost:5105/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const FLASK_BASE = import.meta.env.VITE_FLASK_URL || 'http://localhost:5000';
+const API_BASE_URL = `${API_BASE}/api`;
 
 // ─── Private Helpers ─────────────────────────────────────────────────────────
 
