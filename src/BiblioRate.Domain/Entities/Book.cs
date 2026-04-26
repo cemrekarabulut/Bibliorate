@@ -19,6 +19,11 @@ public class Book
 
     public string   Isbn        { get; set; } = "0000000000";
     public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
+    public int QualityScore { get; set; } // 0-100 arası veri kalite puanı
+
+    // Soft-delete alanları — NightlyQualityGuard tarafından yönetilir
+    public bool      IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
 
     // Navigation properties
     public ICollection<Rating>   Ratings   { get; set; } = [];

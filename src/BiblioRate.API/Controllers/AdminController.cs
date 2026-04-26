@@ -1,5 +1,9 @@
+using BiblioRate.Application.DTOs;
+using BiblioRate.Application.Interfaces;
+using BiblioRate.Infrastructure.Context;
 using BiblioRate.Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BiblioRate.API.Controllers;
 
@@ -12,10 +16,17 @@ namespace BiblioRate.API.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly DataSeederService _dataSeeder;
+    private readonly ApplicationDbContext _context;
+    private readonly IBookQualityEvaluator _qualityEvaluator;
 
-    public AdminController(DataSeederService dataSeeder)
+    public AdminController(
+        DataSeederService dataSeeder,
+        ApplicationDbContext context,
+        IBookQualityEvaluator qualityEvaluator)
     {
         _dataSeeder = dataSeeder;
+        _context = context;
+        _qualityEvaluator = qualityEvaluator;
     }
 
     /// <summary>
@@ -51,5 +62,77 @@ public class AdminController : ControllerBase
             Console.WriteLine($"[AdminController] Cleanup hatası: {ex.Message}");
             return StatusCode(500, new { error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Veritabanındaki kitapların kalitesini analiz edip raporlar.
+    /// Aynı zamanda kalite skorlarını veritabanına kalıcı olarak kaydeder.
+    /// </summary>
+    [HttpGet("quality-report")]
+    public async Task<IActionResult> GetQualityReport()
+    {
+        // Global query filter aktif olduğundan soft-delete yemiş kitaplar hariç tutulacaktır.
+        var books = await _context.Books.ToListAsync();
+
+        if (books.Count == 0)
+        {
+            return Ok(new QualityReportDto
+            {
+                TotalBooks = 0,
+                PerfectBooks = 0,
+                AverageQuality = 0,
+                LowQualityBooks = []
+            });
+        }
+
+        // Skorları yeniden hesapla ve DB'ye kaydet
+        foreach (var book in books)
+        {
+            book.QualityScore = _qualityEvaluator.Evaluate(book);
+        }
+
+        await _context.SaveChangesAsync();
+
+        var report = new QualityReportDto
+        {
+            TotalBooks = books.Count,
+            PerfectBooks = books.Count(b => b.QualityScore == 100),
+            AverageQuality = books.Average(b => b.QualityScore),
+            LowQualityBooks = books
+                .Where(b => b.QualityScore < 40)
+                .Select(b => new LowQualityBookDto
+                {
+                    BookId = b.BookId,
+                    Title = b.Title,
+                    QualityScore = b.QualityScore
+                })
+                .ToList()
+        };
+
+        return Ok(report);
+    }
+
+    /// <summary>
+    /// Veritabanındaki gürültülü (Noise) kayıtları, örneğin özetleri (SparkNotes vb.) kalıcı olarak siler.
+    /// </summary>
+    [HttpDelete("noise")]
+    public async Task<IActionResult> HardDeleteNoise()
+    {
+        string[] noisyKeywords = ["sparknotes", "notes", "sampler", "abridged", "summary"];
+
+        var noiseBooks = await _context.Books
+            .Where(b => noisyKeywords.Any(k => 
+                b.Title.ToLower().Contains(k) || (b.Author != null && b.Author.ToLower().Contains(k))))
+            .ToListAsync();
+
+        if (noiseBooks.Count == 0)
+        {
+            return Ok(new { message = "Gürültülü kayıt bulunamadı." });
+        }
+
+        _context.Books.RemoveRange(noiseBooks);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = $"{noiseBooks.Count} gürültülü kayıt (SparkNotes, Sampler, vb.) kalıcı olarak silindi." });
     }
 }

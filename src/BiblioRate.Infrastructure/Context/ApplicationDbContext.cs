@@ -19,6 +19,9 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Global query filter: soft-delete — IsDeleted=true olan kayıtlar otomatik gizlenir
+        modelBuilder.Entity<Book>().HasQueryFilter(b => !b.IsDeleted);
+
         // Veritabanı düzeyinde UNIQUE kısıtlamaları
         modelBuilder.Entity<Rating>()
             .HasIndex(r => new { r.UserId, r.BookId }).IsUnique();

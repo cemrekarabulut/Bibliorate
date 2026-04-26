@@ -13,16 +13,13 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── 0. .env Yükleme ────────────────────────────────────────────────────────
-// Proje kökündeki .env dosyasından ortam değişkenlerini yükler.
-// Dosya yoksa sessizce devam eder (prod ortamında gerçek env var kullanılır).
 Env.TraversePath().Load();
 
 // ─── 1. Veritabanı ──────────────────────────────────────────────────────────
 var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Veritabanı bağlantı dizesi bulunamadı.");
 
-// .env'den DB_PASSWORD değerini al; yoksa appsettings.json'daki değeri koru
-var dbPassword       = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? string.Empty;
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? string.Empty;
 var connectionString = string.IsNullOrWhiteSpace(dbPassword)
     ? rawConnectionString
     : rawConnectionString.Replace("{DB_PASSWORD}", dbPassword);
@@ -39,8 +36,10 @@ builder.Services.AddScoped<IBookViewRepository,  BookViewRepository>();
 builder.Services.AddScoped<IUserRepository,      UserRepository>();
 builder.Services.AddScoped<ISearchLogRepository, SearchLogRepository>();
 
-// ─── 3. Servis Kayıtları ────────────────────────────────────────────────────
-builder.Services.AddScoped<IAuthService, AuthService>();
+// ─── 3. Servis Kayıtları (Analiz & Kalite Katmanı) ───────────────────────────
+builder.Services.AddScoped<IBookSimilarityScorer, BookSimilarityScorer>();
+builder.Services.AddScoped<IBookQualityEvaluator, BookQualityEvaluator>(); // Rütbe Sistemi Eklendi
+builder.Services.AddScoped<IAuthService,           AuthService>();
 
 // ─── 4. HTTP İstemcileri ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<IGoogleBooksService, GoogleBooksService>();
@@ -53,7 +52,7 @@ builder.Services.AddHttpClient("FlaskApi", client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-// ─── 4. JWT Authentication ──────────────────────────────────────────────────
+// ─── 5. JWT Authentication ──────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key yapılandırılmamış.");
 
@@ -74,54 +73,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// ─── 5. CORS (React ve diğer SPA origin'leri) ───────────────────────────────
+// ─── 6. CORS ───────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-
-    options.AddPolicy("Frontend", policy =>
-    {
-        var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
-                      ?? Array.Empty<string>();
-
-        if (origins.Length == 0)
-        {
-            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-        }
-        else
-        {
-            policy.WithOrigins(origins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
-        }
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
 
-// ─── 6. API & Swagger (JWT destekli) ────────────────────────────────────────
+// ─── 7. API & Swagger ───────────────────────────────────────────────────────
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
     {
-        // Null property'leri JSON'a yazma (temiz çıktı)
         opts.JsonSerializerOptions.DefaultIgnoreCondition =
             System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-        // camelCase — frontend uyumu
         opts.JsonSerializerOptions.PropertyNamingPolicy =
             System.Text.Json.JsonNamingPolicy.CamelCase;
-        // Circular reference (EF navigation) guard
         opts.JsonSerializerOptions.ReferenceHandler =
             System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "BiblioRate API", Version = "v1" });
-
-    // Swagger UI'dan JWT ile test edebilmek için Bearer token desteği
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name         = "Authorization",
@@ -129,9 +105,8 @@ builder.Services.AddSwaggerGen(c =>
         Scheme       = "Bearer",
         BearerFormat = "JWT",
         In           = ParameterLocation.Header,
-        Description  = "JWT token'ınızı girin. Örnek: Bearer eyJhbGci..."
+        Description  = "JWT token'ınızı girin."
     });
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -147,7 +122,6 @@ builder.Services.AddSwaggerGen(c =>
 // ─── Uygulama Pipeline ──────────────────────────────────────────────────────
 var app = builder.Build();
 
-// Global exception handler — HER ŞEYDEN önce
 app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -156,31 +130,21 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// DOĞRU MIDDLEWARE SIRASI:
-// 1. HTTPS yönlendirme
-// 2. CORS
-// 3. Authentication (kim olduğunu belirle)
-// 4. Authorization (ne yapabileceğini belirle)
-// 5. Controller mapping
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ─── Veritabanı Otomasyonu & Seeding ────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     dbContext.Database.Migrate();
 
     var dataSeeder = scope.ServiceProvider.GetRequiredService<DataSeederService>();
-    await dataSeeder.SeedAsync();
-
-    // NOT: Veritabanı temizleme (deduplication + kategori normalizasyonu) artık
-    // startup'ta otomatik çalışmaz. Tek seferlik çalıştırmak için:
-    // POST /api/admin/cleanup  (AdminController)
+    // await dataSeeder.SeedAsync(); // Manual Trigger: Otomatik çalışma devre dışı bırakıldı. Sadece Admin Cleanup veya manuel tetikleme kullanılacak.
 }
 
 app.MapControllers();
-
 app.Run();
