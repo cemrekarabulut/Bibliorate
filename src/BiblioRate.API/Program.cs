@@ -117,11 +117,9 @@ var app = builder.Build();
 // â”€â”€â”€ Uygulama Pipeline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.UseMiddleware<ExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
+
     app.UseSwagger();
     app.UseSwaggerUI();
-}
 
 app.UseRouting();
 app.UseCors("AllowAll");
@@ -150,3 +148,4 @@ using (var scope = app.Services.CreateScope())
 
 app.MapControllers();
 app.Run();
+
