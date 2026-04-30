@@ -1,11 +1,3 @@
-# ⚠️  Environment variables — NEVER commit to GitHub
-.env
-.env.local
-.env.*.local
-.env.development
-.env.production
-# .env.example is safe to commit (no real secrets)
-
 # Logs
 logs
 *.log
@@ -19,11 +11,6 @@ node_modules
 dist
 dist-ssr
 *.local
-
-# Environment variable files (keep .env.example tracked)
-.env
-.env.*
-!.env.example
 
 # Editor directories and files
 .vscode/*

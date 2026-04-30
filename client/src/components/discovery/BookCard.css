@@ -60,16 +60,10 @@
   transform: translateY(0);
 }
 
-.book-genres {
+.book-genre-badge {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  display: flex;
-  gap: 0.5rem;
-  z-index: 10;
-}
-
-.book-genre-badge {
   background: var(--bg-glass);
   backdrop-filter: blur(8px);
   color: var(--text-main);

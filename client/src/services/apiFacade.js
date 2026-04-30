@@ -3,15 +3,14 @@
  * ------------
  * Facade Pattern implementation that provides a single, unified interface
  * for the React frontend to communicate with:
- *   - The C# .NET 8 REST API  (configured via VITE_API_URL env variable)
+ *   - The C# .NET 8 REST API  (http://localhost:5105)
  *   - Analytics endpoints forwarded through the same API from Flask
  *
  * All components import { apiFacade } — they never touch fetch/headers directly.
  * Swapping the base URL is the only change needed for staging / production.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-const API_BASE_URL = `${API_BASE}/api`;
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:5105') + '/api';
 
 // ─── Private Helpers ─────────────────────────────────────────────────────────
 

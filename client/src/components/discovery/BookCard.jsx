@@ -29,11 +29,7 @@ const BookCard = ({ book }) => {
         <div className="book-overlay">
           <Link to={`/book/${book.id}`} className="view-btn">View Details</Link>
         </div>
-        <div className="book-genres">
-          {book.genres && book.genres.slice(0, 2).map((g, idx) => (
-            <div key={idx} className="book-genre-badge">{g}</div>
-          ))}
-        </div>
+        <div className="book-genre-badge">{book.genre}</div>
       </div>
 
       <div className="book-info">

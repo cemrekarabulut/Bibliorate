@@ -56,9 +56,6 @@
   font-size: 0.85rem;
   font-weight: 600;
   border: 1px solid rgba(74, 222, 128, 0.2);
-  margin-right: 0.5rem;
-  margin-bottom: 0.5rem;
-  display: inline-block;
 }
 
 .detail-title {
@@ -122,80 +119,7 @@
 .detail-actions {
   display: flex;
   gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-/* ── Auth feedback banners ─────────────────────────────────────────────── */
-.auth-error {
-  background: rgba(248, 113, 113, 0.12);
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  color: #f87171;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-}
-
-.auth-success {
-  background: rgba(74, 222, 128, 0.12);
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  color: var(--primary);
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-}
-
-/* ── Star Rating Picker ────────────────────────────────────────────────── */
-.rating-section {
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--border-glass);
-}
-
-.star-picker {
-  display: flex;
-  gap: 0.25rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
-}
-
-.star-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.2rem;
-  color: var(--text-muted);
-  transition: transform 0.15s ease;
-}
-
-.star-btn:hover,
-.star-btn.filled {
-  color: #fbbf24;
-}
-
-.star-btn:hover {
-  transform: scale(1.25);
-}
-
-.selected-rating-label {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-}
-
-.rating-done {
-  color: var(--primary);
-  font-size: 1rem;
-  font-weight: 600;
-  padding: 0.75rem 0;
-}
-
-.rate-submit-btn {
-  margin-top: 0.5rem;
-}
-
-.rate-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  margin-top: auto;
 }
 
 .primary-btn, .secondary-btn {
