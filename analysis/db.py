@@ -15,7 +15,10 @@ def get_db():
         2. Gerçek değerleri doldurun
         3. .env dosyasını asla git'e commit etmeyin!
     """
-    ssl_enabled = os.environ.get("DB_SSL", "false").lower() == "true"
+    # SSL_MODE=REQUIRED (Aiven format) veya DB_SSL=true her ikisini de destekler
+    ssl_mode = os.environ.get("SSL_MODE", "").upper()
+    db_ssl   = os.environ.get("DB_SSL",   "false").lower()
+    ssl_enabled = (ssl_mode == "REQUIRED") or (db_ssl == "true")
 
     return mysql.connector.connect(
         host         = os.environ.get("DB_HOST",     "localhost"),
