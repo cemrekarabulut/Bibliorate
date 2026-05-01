@@ -221,17 +221,38 @@ class ApiFacade {
   // ── Ratings / Reviews ─────────────────────────────────────────────────────
 
   /**
-   * Submits a rating (and potentially a review comment if backend supports it).
+   * Submits or updates a rating.
+   * Tries POST first; if backend says "already rated", falls back to PUT.
    */
   async submitRating(userId, bookId, score, comment = '', token) {
+    const body = JSON.stringify({
+      userId: parseInt(userId),
+      bookId: parseInt(bookId),
+      score: parseInt(score),
+      comment,
+    });
+
     try {
       return await request('/ratings', {
         method:  'POST',
         headers: buildHeaders(token),
-        body:    JSON.stringify({ userId: parseInt(userId), bookId: parseInt(bookId), score: parseInt(score), comment }),
+        body,
       });
     } catch (err) {
-      console.warn('Backend failed to process rating:', err);
+      const msg = (err.message || '').toLowerCase();
+      // If backend says already rated, try updating instead
+      if (msg.includes('zaten') || msg.includes('already') || msg.includes('duplicate')) {
+        try {
+          return await request('/ratings', {
+            method:  'PUT',
+            headers: buildHeaders(token),
+            body,
+          });
+        } catch (putErr) {
+          console.warn('PUT /ratings also failed:', putErr);
+          throw putErr;
+        }
+      }
       throw err;
     }
   }

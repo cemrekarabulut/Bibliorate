@@ -114,6 +114,11 @@ const BookDetailPage = () => {
     ? reviews.reduce((sum, r) => sum + (r.score || 0), 0) / reviews.length
     : book.rating;
 
+  // Check if current user already reviewed this book
+  const userExistingReview = isLoggedIn
+    ? reviews.find(r => r.userId === userId || r.userId === String(userId))
+    : null;
+
   const formattedReviews = liveReviewCount >= 1000
     ? `${(liveReviewCount / 1000).toFixed(1)}k`
     : String(liveReviewCount);
@@ -177,7 +182,7 @@ const BookDetailPage = () => {
 
           <div className="detail-actions">
             <button className="primary-btn" onClick={handleRateClick}>
-              <Star size={18} /> Rate & Review
+              <Star size={18} /> {userExistingReview ? 'Update Review' : 'Rate & Review'}
             </button>
             <button
               className="secondary-btn"
