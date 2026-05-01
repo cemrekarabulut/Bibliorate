@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { apiFacade } from '../services/apiFacade';
 import { useAuth } from '../context/AuthContext';
 import BookCard from '../components/discovery/BookCard';
+import SettingsModal from '../components/modals/SettingsModal';
 import './ProfilePage.css';
 
 /**
@@ -17,6 +18,7 @@ const ProfilePage = () => {
 
   const [favourites, setFavourites] = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -68,7 +70,7 @@ const ProfilePage = () => {
           <p>{user?.email}</p>
         </div>
         <div className="profile-actions">
-          <button className="settings-btn">
+          <button className="settings-btn" onClick={() => setIsSettingsOpen(true)}>
             <Settings size={20} /> Settings
           </button>
           <button className="settings-btn" onClick={logout} style={{ marginLeft: '0.5rem' }}>
@@ -100,6 +102,11 @@ const ProfilePage = () => {
           </div>
         )}
       </section>
+
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
     </div>
   );
 };

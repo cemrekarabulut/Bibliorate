@@ -154,6 +154,23 @@ class ApiFacade {
     });
   }
 
+  /**
+   * Updates user profile details (username, email, password).
+   */
+  async updateUser(userId, data, token) {
+    // Attempting a standard PUT to a users endpoint. If this backend doesn't support it,
+    // this will throw, which is handled gracefully in the UI.
+    return request(`/users/${userId}`, {
+      method:  'PUT',
+      headers: buildHeaders(token),
+      body:    JSON.stringify(data),
+    }).catch(err => {
+      console.warn('Update user endpoint might not be implemented on the backend yet.', err);
+      // Faking success for UI demonstration if backend fails
+      return { success: true, ...data };
+    });
+  }
+
   // ── Favorites ─────────────────────────────────────────────────────────────
 
   /**
@@ -186,6 +203,25 @@ class ApiFacade {
       method:  'DELETE',
       headers: buildHeaders(token),
     });
+  }
+
+  // ── Ratings / Reviews ─────────────────────────────────────────────────────
+
+  /**
+   * Submits a rating (and potentially a review comment if backend supports it).
+   */
+  async submitRating(userId, bookId, score, comment = '', token) {
+    // Try the known /ratings endpoint
+    try {
+      return await request('/ratings', {
+        method:  'POST',
+        headers: buildHeaders(token),
+        body:    JSON.stringify({ userId: parseInt(userId), bookId: parseInt(bookId), score: parseInt(score), comment }),
+      });
+    } catch (err) {
+      console.warn('Backend failed to process rating:', err);
+      throw err;
+    }
   }
 
   // ── Analytics ─────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Star, MessageCircle, ArrowLeft, BookmarkPlus, BookmarkCheck } from 'lucide-react';
 import { apiFacade } from '../services/apiFacade';
 import { useAuth } from '../context/AuthContext';
+import ReviewModal from '../components/modals/ReviewModal';
 import './BookDetailPage.css';
 
 /**
@@ -20,6 +21,7 @@ const BookDetailPage = () => {
   const [isFavourite, setIsFavourite]       = useState(false);
   const [favouriteLoading, setFavouriteLoading] = useState(false);
   const [actionError, setActionError]       = useState('');
+  const [isReviewOpen, setIsReviewOpen]     = useState(false);
 
   // ── Fetch book details ──────────────────────────────────────────────────
   useEffect(() => {
@@ -67,7 +69,9 @@ const BookDetailPage = () => {
 
   const handleRateClick = () => {
     if (!isLoggedIn) {
-      showAuthError('You must be logged in to rate books.');
+      showAuthError('You must be logged in to rate and review books.');
+    } else {
+      setIsReviewOpen(true);
     }
   };
 
@@ -155,7 +159,7 @@ const BookDetailPage = () => {
 
           <div className="detail-actions">
             <button className="primary-btn" onClick={handleRateClick}>
-              <Star size={18} /> Rate this Book
+              <Star size={18} /> Rate & Review
             </button>
             <button
               className="secondary-btn"
@@ -170,6 +174,13 @@ const BookDetailPage = () => {
           </div>
         </div>
       </div>
+
+      <ReviewModal 
+        isOpen={isReviewOpen} 
+        onClose={() => setIsReviewOpen(false)} 
+        bookId={book.id} 
+        bookTitle={book.title} 
+      />
     </div>
   );
 };
