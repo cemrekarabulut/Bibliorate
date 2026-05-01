@@ -4,7 +4,7 @@ import { apiFacade } from '../../services/apiFacade';
 import { useAuth } from '../../context/AuthContext';
 import './ReviewModal.css';
 
-const ReviewModal = ({ isOpen, onClose, bookId, bookTitle }) => {
+const ReviewModal = ({ isOpen, onClose, bookId, bookTitle, onReviewSubmitted }) => {
   const { userId, token } = useAuth();
   
   const [rating, setRating] = useState(0);
@@ -31,9 +31,12 @@ const ReviewModal = ({ isOpen, onClose, bookId, bookTitle }) => {
       
       setMessage({ type: 'success', text: 'Review submitted successfully!' });
       setTimeout(() => {
+        setRating(0);
+        setHoverRating(0);
+        setComment('');
+        setMessage({ type: '', text: '' });
         onClose();
-        // ideally reload book details here
-        window.location.reload(); 
+        if (onReviewSubmitted) onReviewSubmitted();
       }, 1500);
     } catch (error) {
       setMessage({ type: 'error', text: error.message || 'Failed to submit review.' });

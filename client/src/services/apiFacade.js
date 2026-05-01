@@ -224,7 +224,6 @@ class ApiFacade {
    * Submits a rating (and potentially a review comment if backend supports it).
    */
   async submitRating(userId, bookId, score, comment = '', token) {
-    // Try the known /ratings endpoint
     try {
       return await request('/ratings', {
         method:  'POST',
@@ -234,6 +233,34 @@ class ApiFacade {
     } catch (err) {
       console.warn('Backend failed to process rating:', err);
       throw err;
+    }
+  }
+
+  /**
+   * Fetches all ratings for a specific book.
+   * Returns an array of { userId, score, comment, createdAt, username }.
+   */
+  async getBookRatings(bookId) {
+    try {
+      return await request(`/ratings/book/${bookId}`);
+    } catch (err) {
+      console.warn('Could not fetch book ratings:', err);
+      return [];
+    }
+  }
+
+  /**
+   * Fetches all ratings made by a specific user.
+   * Returns an array of rating objects.
+   */
+  async getUserRatings(userId, token) {
+    try {
+      return await request(`/ratings/user/${userId}`, {
+        headers: buildHeaders(token),
+      });
+    } catch (err) {
+      console.warn('Could not fetch user ratings:', err);
+      return [];
     }
   }
 

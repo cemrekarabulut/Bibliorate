@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, MessageCircle, ArrowLeft, BookmarkPlus, BookmarkCheck } from 'lucide-react';
+import { Star, MessageCircle, ArrowLeft, BookmarkPlus, BookmarkCheck, User } from 'lucide-react';
 import { apiFacade } from '../services/apiFacade';
 import { useAuth } from '../context/AuthContext';
 import ReviewModal from '../components/modals/ReviewModal';
@@ -11,6 +11,7 @@ import './BookDetailPage.css';
  * --------------
  * Displays full details for a single book fetched from the .NET API.
  * Authenticated users can add / remove the book from their favourites list.
+ * Shows existing reviews/ratings below the book details.
  */
 const BookDetailPage = () => {
   const { id }                              = useParams();
@@ -22,22 +23,28 @@ const BookDetailPage = () => {
   const [favouriteLoading, setFavouriteLoading] = useState(false);
   const [actionError, setActionError]       = useState('');
   const [isReviewOpen, setIsReviewOpen]     = useState(false);
+  const [reviews, setReviews]               = useState([]);
 
   // ── Fetch book details ──────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchBook = async () => {
-      setLoading(true);
-      try {
-        const data = await apiFacade.getBookById(Number(id), userId);
-        setBook(data);
-      } catch (error) {
-        console.error('Failed to fetch book:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBook();
+  const fetchBookData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [bookData, reviewData] = await Promise.all([
+        apiFacade.getBookById(Number(id), userId),
+        apiFacade.getBookRatings(Number(id)),
+      ]);
+      setBook(bookData);
+      setReviews(Array.isArray(reviewData) ? reviewData : []);
+    } catch (error) {
+      console.error('Failed to fetch book:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [id, userId]);
+
+  useEffect(() => {
+    fetchBookData();
+  }, [fetchBookData]);
 
   // ── Favourite toggle ────────────────────────────────────────────────────
 
@@ -75,6 +82,11 @@ const BookDetailPage = () => {
     }
   };
 
+  // Called after a review is submitted — refresh book + reviews
+  const handleReviewSubmitted = () => {
+    fetchBookData();
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -96,9 +108,15 @@ const BookDetailPage = () => {
     );
   }
 
-  const formattedReviews = book.reviews >= 1000
-    ? `${(book.reviews / 1000).toFixed(1)}k`
-    : String(book.reviews);
+  // Use live review count if we fetched reviews
+  const liveReviewCount = reviews.length > 0 ? reviews.length : book.reviews;
+  const liveRating = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + (r.score || 0), 0) / reviews.length
+    : book.rating;
+
+  const formattedReviews = liveReviewCount >= 1000
+    ? `${(liveReviewCount / 1000).toFixed(1)}k`
+    : String(liveReviewCount);
 
   return (
     <div className="book-detail-page">
@@ -141,7 +159,7 @@ const BookDetailPage = () => {
             <div className="metric-box">
               <Star className="metric-icon star" size={24} fill="#fbbf24" />
               <div className="metric-data">
-                <span className="metric-val">{book.rating.toFixed(1)}</span>
+                <span className="metric-val">{liveRating.toFixed(1)}</span>
                 <span className="metric-label">Rating</span>
               </div>
             </div>
@@ -175,11 +193,53 @@ const BookDetailPage = () => {
         </div>
       </div>
 
+      {/* ── Reviews Section ──────────────────────────────────────────── */}
+      <section className="reviews-section">
+        <div className="reviews-header">
+          <MessageCircle className="text-gradient" size={24} />
+          <h2>Reviews ({liveReviewCount})</h2>
+        </div>
+
+        {reviews.length > 0 ? (
+          <div className="reviews-list">
+            {reviews.map((review, index) => (
+              <div key={review.id || index} className="review-card glass-panel">
+                <div className="review-card-header">
+                  <div className="review-user">
+                    <User size={18} />
+                    <span className="review-username">{review.username || review.userName || `User #${review.userId}`}</span>
+                  </div>
+                  <div className="review-score">
+                    <Star size={16} fill="#fbbf24" stroke="#fbbf24" />
+                    <span>{review.score}/10</span>
+                  </div>
+                </div>
+                {review.comment && (
+                  <p className="review-comment">{review.comment}</p>
+                )}
+                {review.createdAt && (
+                  <span className="review-date">
+                    {new Date(review.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric', month: 'short', day: 'numeric'
+                    })}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="no-reviews glass-panel">
+            <p>No reviews yet. Be the first to share your thoughts!</p>
+          </div>
+        )}
+      </section>
+
       <ReviewModal 
         isOpen={isReviewOpen} 
         onClose={() => setIsReviewOpen(false)} 
         bookId={book.id} 
         bookTitle={book.title} 
+        onReviewSubmitted={handleReviewSubmitted}
       />
     </div>
   );
