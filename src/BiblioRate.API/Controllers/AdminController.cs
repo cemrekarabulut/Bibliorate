@@ -4,6 +4,7 @@ using BiblioRate.Infrastructure.Context;
 using BiblioRate.Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BiblioRate.API.Controllers;
 
@@ -18,15 +19,18 @@ public class AdminController : ControllerBase
     private readonly DataSeederService _dataSeeder;
     private readonly ApplicationDbContext _context;
     private readonly IBookQualityEvaluator _qualityEvaluator;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public AdminController(
         DataSeederService dataSeeder,
         ApplicationDbContext context,
-        IBookQualityEvaluator qualityEvaluator)
+        IBookQualityEvaluator qualityEvaluator,
+        IServiceScopeFactory scopeFactory)
     {
         _dataSeeder = dataSeeder;
         _context = context;
         _qualityEvaluator = qualityEvaluator;
+        _scopeFactory = scopeFactory;
     }
 
     /// <summary>
@@ -45,29 +49,36 @@ public class AdminController : ControllerBase
     /// </remarks>
     /// <summary>
     /// Google Books API'den kitapları çekip veritabanına ekler.
-    /// Veritabanında zaten kitap varsa otomatik olarak durur (Safety Guard).
+    /// İşlem arka planda çalışır, hemen 202 Accepted döner.
+    /// Render loglarından ilerlemeyi takip edebilirsiniz.
     /// </summary>
     [HttpPost("seed")]
-    public async Task<IActionResult> SeedBooksAsync(CancellationToken cancellationToken)
+    public IActionResult SeedBooksAsync()
     {
-        try
-        {
-            Console.WriteLine("[AdminController] /api/admin/seed tetiklendi.");
-            await _dataSeeder.SeedAsync(cancellationToken);
+        Console.WriteLine("[AdminController] /api/admin/seed tetiklendi — arka planda başlatılıyor.");
 
-            var bookCount = await _context.Books.CountAsync(cancellationToken);
-            return Ok(new
-            {
-                message = "Seeding tamamlandı.",
-                totalBooks = bookCount,
-                timestamp = DateTime.UtcNow
-            });
-        }
-        catch (Exception ex)
+        // Seeder dakikalarca sürer; HTTP timeout almamak için fire-and-forget
+        _ = Task.Run(async () =>
         {
-            Console.WriteLine($"[AdminController] Seed hatası: {ex.Message}");
-            return StatusCode(500, new { error = ex.Message });
-        }
+            using var scope = _scopeFactory.CreateScope();
+            var seeder = scope.ServiceProvider.GetRequiredService<DataSeederService>();
+            try
+            {
+                await seeder.SeedAsync();
+                Console.WriteLine("[AdminController] Seeding tamamlandı.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AdminController] Seed arka plan hatası: {ex.Message}");
+            }
+        });
+
+        return Accepted(new
+        {
+            message = "Seeding arka planda başlatıldı. Render loglarından ilerlemeyi takip edin.",
+            hint = "[Save] satırlarını arayın.",
+            timestamp = DateTime.UtcNow
+        });
     }
 
     [HttpPost("cleanup")]
