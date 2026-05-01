@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -9,23 +9,99 @@ namespace BiblioRate.Infrastructure.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Hata almamak için DropForeignKey işlemlerini try-catch mantığında 
-            // veya veritabanı kilitlenmelerine karşı güvenli hale getiriyoruz.
-            // Eğer tablolar zaten ilişkisizse bu adımı atlar.
-            
-            try 
-            {
-                migrationBuilder.DropForeignKey(name: "FK_BookViews_Users_UserId", table: "BookViews");
-                migrationBuilder.DropForeignKey(name: "FK_Favorites_Users_UserId", table: "Favorites");
-                migrationBuilder.DropForeignKey(name: "FK_Ratings_Users_UserId", table: "Ratings");
-                migrationBuilder.DropForeignKey(name: "FK_Reviews_Users_UserId", table: "Reviews");
-                migrationBuilder.DropForeignKey(name: "FK_SearchLogs_Users_UserId", table: "SearchLogs");
-            }
-            catch { /* Eğer anahtar zaten yoksa yoksay */ }
+            // ----------------------------------------------------------------
+            // Adım 1: FK'ları VARSA sil (idempotent — önceki deploy'da zaten
+            //          silinmiş olabilir, tekrar hata vermez)
+            // ----------------------------------------------------------------
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS `__BiblioDropFK`");
 
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_Users",
-                table: "Users");
+            migrationBuilder.Sql(@"
+CREATE PROCEDURE `__BiblioDropFK`(IN tbl VARCHAR(128), IN fk VARCHAR(128))
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = DATABASE()
+          AND TABLE_NAME = tbl
+          AND CONSTRAINT_NAME = fk
+          AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+    ) THEN
+        SET @q = CONCAT('ALTER TABLE `', tbl, '` DROP FOREIGN KEY `', fk, '`');
+        PREPARE s FROM @q;
+        EXECUTE s;
+        DEALLOCATE PREPARE s;
+    END IF;
+END");
+
+            migrationBuilder.Sql("CALL `__BiblioDropFK`('BookViews',  'FK_BookViews_Users_UserId')");
+            migrationBuilder.Sql("CALL `__BiblioDropFK`('Favorites',  'FK_Favorites_Users_UserId')");
+            migrationBuilder.Sql("CALL `__BiblioDropFK`('Ratings',    'FK_Ratings_Users_UserId')");
+            migrationBuilder.Sql("CALL `__BiblioDropFK`('Reviews',    'FK_Reviews_Users_UserId')");
+            migrationBuilder.Sql("CALL `__BiblioDropFK`('SearchLogs', 'FK_SearchLogs_Users_UserId')");
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS `__BiblioDropFK`");
+
+            // ----------------------------------------------------------------
+            // Adım 2: Users tablosuna Id kolonu ekle + PK'yı güncelle
+            //          (sadece Id kolonu yoksa çalışır — idempotent)
+            // ----------------------------------------------------------------
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS `__BiblioFixPK`");
+
+            migrationBuilder.Sql(@"
+CREATE PROCEDURE `__BiblioFixPK`()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'Users'
+          AND COLUMN_NAME = 'Id'
+    ) THEN
+        ALTER TABLE `Users` MODIFY COLUMN `UserId` int NOT NULL;
+        ALTER TABLE `Users` DROP PRIMARY KEY;
+        ALTER TABLE `Users` ADD COLUMN `Id` int NOT NULL AUTO_INCREMENT FIRST, ADD PRIMARY KEY (`Id`);
+    END IF;
+END");
+
+            migrationBuilder.Sql("CALL `__BiblioFixPK`()");
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS `__BiblioFixPK`");
+
+            // ----------------------------------------------------------------
+            // Adım 3: FK'ları YOKSA ekle (idempotent)
+            // ----------------------------------------------------------------
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS `__BiblioAddFK`");
+
+            migrationBuilder.Sql(@"
+CREATE PROCEDURE `__BiblioAddFK`(IN tbl VARCHAR(128), IN fk VARCHAR(128), IN col VARCHAR(128), IN refCol VARCHAR(128), IN onDel VARCHAR(64))
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = DATABASE()
+          AND TABLE_NAME = tbl
+          AND CONSTRAINT_NAME = fk
+          AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+    ) THEN
+        IF onDel = '' THEN
+            SET @q = CONCAT('ALTER TABLE `', tbl, '` ADD CONSTRAINT `', fk,
+                            '` FOREIGN KEY (`', col, '`) REFERENCES `Users` (`', refCol, '`)');
+        ELSE
+            SET @q = CONCAT('ALTER TABLE `', tbl, '` ADD CONSTRAINT `', fk,
+                            '` FOREIGN KEY (`', col, '`) REFERENCES `Users` (`', refCol, '`) ON DELETE ', onDel);
+        END IF;
+        PREPARE s FROM @q;
+        EXECUTE s;
+        DEALLOCATE PREPARE s;
+    END IF;
+END");
+
+            migrationBuilder.Sql("CALL `__BiblioAddFK`('BookViews',  'FK_BookViews_Users_UserId',  'UserId', 'Id', '')");
+            migrationBuilder.Sql("CALL `__BiblioAddFK`('Favorites',  'FK_Favorites_Users_UserId',  'UserId', 'Id', 'CASCADE')");
+            migrationBuilder.Sql("CALL `__BiblioAddFK`('Ratings',    'FK_Ratings_Users_UserId',    'UserId', 'Id', 'CASCADE')");
+            migrationBuilder.Sql("CALL `__BiblioAddFK`('Reviews',    'FK_Reviews_Users_UserId',    'UserId', 'Id', 'CASCADE')");
+            migrationBuilder.Sql("CALL `__BiblioAddFK`('SearchLogs', 'FK_SearchLogs_Users_UserId', 'UserId', 'Id', '')");
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS `__BiblioAddFK`");
+        }
+
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(name: "Id", table: "Users");
 
             migrationBuilder.AlterColumn<int>(
                 name: "UserId",
@@ -34,66 +110,9 @@ namespace BiblioRate.Infrastructure.Migrations
                 nullable: false,
                 oldClrType: typeof(int),
                 oldType: "int")
-                .OldAnnotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn);
-
-            migrationBuilder.AddColumn<int>(
-                name: "Id",
-                table: "Users",
-                type: "int",
-                nullable: false,
-                defaultValue: 0)
                 .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn);
 
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_Users",
-                table: "Users",
-                column: "Id");
-
-            // Yeniden oluşturma işlemleri
-            migrationBuilder.AddForeignKey(
-                name: "FK_BookViews_Users_UserId",
-                table: "BookViews",
-                column: "UserId",
-                principalTable: "Users",
-                principalColumn: "Id");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_Favorites_Users_UserId",
-                table: "Favorites",
-                column: "UserId",
-                principalTable: "Users",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_Ratings_Users_UserId",
-                table: "Ratings",
-                column: "UserId",
-                principalTable: "Users",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_Reviews_Users_UserId",
-                table: "Reviews",
-                column: "UserId",
-                principalTable: "Users",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_SearchLogs_Users_UserId",
-                table: "SearchLogs",
-                column: "UserId",
-                principalTable: "Users",
-                principalColumn: "Id");
-        }
-
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            // Down metodu, veritabanını eski haline döndürmek için kullanılır.
-            // Mevcut yapıda bir değişiklik yapmıyoruz.
-            // (Eğer Down metodu da hata verirse, burayı da Up'taki gibi sarmalayabiliriz.)
+            migrationBuilder.AddPrimaryKey(name: "PK_Users", table: "Users", column: "UserId");
         }
     }
 }
