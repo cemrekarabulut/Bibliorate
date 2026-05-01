@@ -192,10 +192,17 @@ class ApiFacade {
    * Requires authentication (token passed in header).
    */
   async getFavorites(userId, token) {
-    const data = await request(`/favorites/user/${userId}`, {
-      headers: buildHeaders(token),
-    });
-    const books = data.map(normaliseBook);
+    let books = [];
+    try {
+      const data = await request(`/favorites/user/${userId}`, {
+        headers: buildHeaders(token),
+      });
+      if (Array.isArray(data)) {
+        books = data.map(normaliseBook);
+      }
+    } catch (err) {
+      console.warn('Could not fetch favorites, backend endpoint might be missing:', err);
+    }
     return this._augmentBooksWithLocalRatings(books);
   }
 
