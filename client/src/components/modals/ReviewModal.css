@@ -1,3 +1,10 @@
+.modal-content {
+  background-color: var(--bg-secondary) !important;
+  backdrop-filter: none !important;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
 .review-subtitle {
   text-align: center;
   color: var(--text-secondary);

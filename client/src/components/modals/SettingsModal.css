@@ -19,6 +19,10 @@
   max-width: 450px;
   padding: 2rem;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: var(--bg-secondary) !important;
+  backdrop-filter: none !important;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 .modal-close {

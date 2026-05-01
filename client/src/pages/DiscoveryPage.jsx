@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { apiFacade } from '../services/apiFacade';
 import BookCard from '../components/discovery/BookCard';
+import RecommendedBook from '../components/discovery/RecommendedBook';
 import './DiscoveryPage.css';
 
 /**
@@ -121,6 +122,8 @@ const DiscoveryPage = () => {
             <h2>{selectedGenre === 'All' ? 'Trending Now' : `${selectedGenre} Books`}</h2>
             <span className="results-count">{books.length} results</span>
           </div>
+          
+          <RecommendedBook />
 
           {loading ? (
             <div className="loading-state">

@@ -34,9 +34,22 @@ const request = async (endpoint, options = {}) => {
   if (!response.ok) {
     let message = `API error: ${response.status} ${response.statusText}`;
     try {
-      const body = await response.text();
-      if (body) message = body;
+      const textBody = await response.text();
+      if (textBody) {
+        try {
+          const jsonBody = JSON.parse(textBody);
+          message = jsonBody.message || jsonBody.title || textBody;
+        } catch {
+          message = textBody;
+        }
+      }
     } catch { /* ignore parse errors */ }
+    
+    // Clean up backend prefix if it sends 'message: ...'
+    if (typeof message === 'string' && message.toLowerCase().startsWith('message: ')) {
+      message = message.substring(9).trim();
+    }
+    
     throw new Error(message);
   }
 
