@@ -172,16 +172,13 @@ class ApiFacade {
    * Updates user profile details (username, email, password).
    */
   async updateUser(userId, data, token) {
-    // Attempting a standard PUT to a users endpoint. If this backend doesn't support it,
-    // this will throw, which is handled gracefully in the UI.
-    return request(`/users/${userId}`, {
+    return request('/auth/profile', {
       method:  'PUT',
       headers: buildHeaders(token),
       body:    JSON.stringify(data),
     }).catch(err => {
-      console.warn('Update user endpoint might not be implemented on the backend yet.', err);
-      // Faking success for UI demonstration if backend fails
-      return { success: true, ...data };
+      console.warn('Failed to update profile:', err);
+      throw err;
     });
   }
 
