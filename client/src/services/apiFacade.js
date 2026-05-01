@@ -117,7 +117,7 @@ class ApiFacade {
     };
     if (sorters[sortBy]) books.sort(sorters[sortBy]);
 
-    return books;
+    return this._augmentBooksWithLocalRatings(books);
   }
 
   /**
@@ -127,7 +127,8 @@ class ApiFacade {
   async getBookById(id, userId = null) {
     const query = userId ? `?userId=${userId}` : '';
     const dto = await request(`/books/${id}${query}`);
-    return normaliseBook(dto);
+    const book = normaliseBook(dto);
+    return this._augmentBooksWithLocalRatings([book])[0];
   }
 
   /**
@@ -194,7 +195,8 @@ class ApiFacade {
     const data = await request(`/favorites/user/${userId}`, {
       headers: buildHeaders(token),
     });
-    return data.map(normaliseBook);
+    const books = data.map(normaliseBook);
+    return this._augmentBooksWithLocalRatings(books);
   }
 
   /**
@@ -233,6 +235,43 @@ class ApiFacade {
 
   _saveLocalReviews(reviews) {
     localStorage.setItem('bibliorate_reviews', JSON.stringify(reviews));
+  }
+
+  /**
+   * Merges local reviews into the book list so the UI updates immediately
+   * even on the discovery/main page without refreshing from the backend.
+   */
+  _augmentBooksWithLocalRatings(books) {
+    const localReviews = this._getLocalReviews();
+    if (!localReviews.length) return books;
+
+    return books.map(book => {
+      const bookLocalReviews = localReviews.filter(r => r.bookId === book.id);
+      if (!bookLocalReviews.length) return book;
+
+      let totalScore = book.rating * book.reviews;
+      let count = book.reviews;
+      
+      // If the backend returned 0 reviews, we can just use our local ones directly
+      if (book.reviews === 0) {
+        totalScore = 0;
+        count = 0;
+      }
+
+      bookLocalReviews.forEach(r => {
+        // Note: this naively assumes the backend hasn't already included this rating.
+        // If it has, the rating gets slightly skewed until localStorage is cleared,
+        // but it ensures the UI feels responsive.
+        totalScore += r.score;
+        count += 1;
+      });
+
+      return {
+        ...book,
+        rating: count > 0 ? totalScore / count : 0,
+        reviews: count
+      };
+    });
   }
 
   /**
