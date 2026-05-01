@@ -43,6 +43,33 @@ public class AdminController : ControllerBase
     /// silinecek/değiştirilecek kayıt kalmadığından (idempotent) zarar vermez,
     /// ancak gereksiz DB sorgusu yapar.
     /// </remarks>
+    /// <summary>
+    /// Google Books API'den kitapları çekip veritabanına ekler.
+    /// Veritabanında zaten kitap varsa otomatik olarak durur (Safety Guard).
+    /// </summary>
+    [HttpPost("seed")]
+    public async Task<IActionResult> SeedBooksAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            Console.WriteLine("[AdminController] /api/admin/seed tetiklendi.");
+            await _dataSeeder.SeedAsync(cancellationToken);
+
+            var bookCount = await _context.Books.CountAsync(cancellationToken);
+            return Ok(new
+            {
+                message = "Seeding tamamlandı.",
+                totalBooks = bookCount,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AdminController] Seed hatası: {ex.Message}");
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
     [HttpPost("cleanup")]
     public async Task<IActionResult> RunCleanupAsync(CancellationToken cancellationToken)
     {
