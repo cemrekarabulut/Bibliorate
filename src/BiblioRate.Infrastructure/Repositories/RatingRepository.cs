@@ -25,7 +25,22 @@ public class RatingRepository : IRatingRepository
     {
         return await _context.Ratings
             .Where(r => r.BookId == bookId)
+            .Include(r => r.User)
             .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Rating>> GetRatingsByUserIdAsync(int userId)
+    {
+        return await _context.Ratings
+            .Where(r => r.UserId == userId)
+            .Include(r => r.User)
+            .ToListAsync();
+    }
+
+    public async Task UpdateRatingAsync(Rating rating)
+    {
+        _context.Ratings.Update(rating);
+        await _context.SaveChangesAsync();
     }
 
     /// <summary>

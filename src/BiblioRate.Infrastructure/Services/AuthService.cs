@@ -99,6 +99,23 @@ public class AuthService : IAuthService
             user.Username = request.Username.Trim();
         }
 
+        // Yeni email talep edildiyse çakışma kontrolü yap
+        if (!string.IsNullOrWhiteSpace(request.Email) &&
+            !string.Equals(user.Email, request.Email.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            var exists = await _userRepository.UserExistsAsync(string.Empty, request.Email.Trim());
+            if (exists)
+                throw new InvalidOperationException("Bu e-posta adresi zaten kullanımda.");
+
+            user.Email = request.Email.Trim();
+        }
+
+        // Yeni şifre talep edildiyse hash'le ve kaydet
+        if (!string.IsNullOrWhiteSpace(request.Password))
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+        }
+
         // Null olmayan alanları güncelle; null gelen alanlar mevcut değerini korur
         if (request.Bio is not null)
             user.Bio = request.Bio;

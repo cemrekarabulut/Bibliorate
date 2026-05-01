@@ -12,6 +12,14 @@ public class UpdateProfileRequest
     [StringLength(50, MinimumLength = 3, ErrorMessage = "Kullanıcı adı 3-50 karakter arasında olmalıdır.")]
     public string? Username { get; set; }
 
+    /// <summary>Yeni email adresi. Boş bırakılırsa mevcut değer korunur.</summary>
+    [EmailAddress(ErrorMessage = "Geçerli bir e-posta adresi giriniz.")]
+    public string? Email { get; set; }
+
+    /// <summary>Yeni şifre. Boş bırakılırsa mevcut değer korunur.</summary>
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "Şifre en az 6 karakter olmalıdır.")]
+    public string? Password { get; set; }
+
     /// <summary>Kullanıcı biyografisi. Boş bırakılırsa mevcut değer korunur.</summary>
     [StringLength(500, ErrorMessage = "Biyografi en fazla 500 karakter olabilir.")]
     public string? Bio { get; set; }
