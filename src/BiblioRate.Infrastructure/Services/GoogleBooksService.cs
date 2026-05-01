@@ -150,14 +150,6 @@ public class GoogleBooksService : IGoogleBooksService
 
                     var thumbnailUrl = ResolveThumbnail(v.ImageLinks?.Thumbnail, isbn);
 
-                    // Görsel kalite guard: gerçek kapak bulunamadıysa kitabı reddet
-                    // ResolveThumbnail placehold.co döndürüyorsa OpenLibrary da başarısız demektir
-                    if (thumbnailUrl.Contains("placehold.co", StringComparison.OrdinalIgnoreCase))
-                    {
-                        Console.WriteLine($"[Skip] \"{v.Title}\" - Sebep: Gerçek kapak görseli bulunamadı");
-                        return null;
-                    }
-
                     return new Book
                     {
                         Title        = v.Title,

@@ -218,7 +218,7 @@ public class DataSeederService
             foreach (var b in fetched)
             {
                 if (IsDuplicate(b, existing)) continue;
-                if ((b.Description?.Length ?? 0) < 50 || !IsGoodThumbnail(b.ThumbnailUrl)) continue;
+                if ((b.Description?.Length ?? 0) < 50) continue;
 
                 b.QualityScore = _qualityEvaluator.Evaluate(b);
 
