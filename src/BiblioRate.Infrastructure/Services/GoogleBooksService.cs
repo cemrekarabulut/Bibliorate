@@ -3,12 +3,14 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using BiblioRate.Application.Interfaces;
 using BiblioRate.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 
 namespace BiblioRate.Infrastructure.Services;
 
 public class GoogleBooksService : IGoogleBooksService
 {
     private readonly HttpClient _httpClient;
+    private readonly string? _apiKey;
 
     // case-insensitive okuma — Google'ın camelCase alanlarını PascalCase property'lere güvenle map eder
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -16,10 +18,10 @@ public class GoogleBooksService : IGoogleBooksService
         PropertyNameCaseInsensitive = true
     };
 
-
-    public GoogleBooksService(HttpClient httpClient)
+    public GoogleBooksService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
+        _apiKey = configuration["GoogleBooksApiKey"];
     }
 
     public async Task<IEnumerable<Book>> SearchBooksAsync(string query, string authorName = "", string authorGenre = "General")
@@ -29,6 +31,8 @@ public class GoogleBooksService : IGoogleBooksService
             // q=Gone+Girl+Gillian+Flynn — kitap adı + yazar adı düz arama
             var q   = query.Replace(" ", "+");
             var url = $"https://www.googleapis.com/books/v1/volumes?q={q}&printType=books&maxResults=40&langRestrict=en";
+            if (!string.IsNullOrWhiteSpace(_apiKey))
+                url += $"&key={_apiKey}";
 
             // Tam URL'i her zaman logla — 0 sonuç gelirse tarayıcıda yapıştırıp test et
             Console.WriteLine($"[API] İstek URL: {url}");
