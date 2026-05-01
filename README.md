@@ -18,7 +18,7 @@
 ## 📂 Repository Structure
 The project is organized into a modular multi-stack architecture to ensure a clean separation of concerns:
 
-### 🔹 Backend (C# .NET 8)
+### 🔹 Backend (C# .NET 9)
 *Located in the `src/` directory, following **Onion Architecture**:*
 * **`src/BiblioRate.Domain`**: Core layer housing entities (Books, Users, Reviews) and repository interfaces.
 * **`src/BiblioRate.Application`**: Business logic, DTOs, and service definitions.
@@ -34,7 +34,7 @@ The project is organized into a modular multi-stack architecture to ensure a cle
 ---
 
 ## 🛠 Tech Stack
-* **Backend:** .NET 8, C#, Entity Framework Core.
+* **Backend:** .NET 9, C#, Entity Framework Core.
 * **Data Analysis:** Python, Flask.
 * **Frontend:** React.
 * **Database:** MySQL.
