@@ -200,6 +200,11 @@ public class DataSeederService
             var author = QueryAuthorMap.GetValueOrDefault(query, query);
             var genre = AuthorGenreMap.GetValueOrDefault(author, "Fiction");
             delayMs = await ProcessSearchAsync(query, author, genre, existingBooks, delayMs, cancellationToken);
+
+            // Her istekten sonra minimum 3 saniye bekle — rate limit'e girmemek için
+            var wait = Math.Max(delayMs, 3000);
+            Console.WriteLine($"[Seeder] Sonraki istek için {wait / 1000}s bekleniyor...");
+            await Task.Delay(wait, cancellationToken);
         }
     }
 

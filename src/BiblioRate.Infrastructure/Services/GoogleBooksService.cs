@@ -33,7 +33,14 @@ public class GoogleBooksService : IGoogleBooksService
             // Tam URL'i her zaman logla — 0 sonuç gelirse tarayıcıda yapıştırıp test et
             Console.WriteLine($"[API] İstek URL: {url}");
 
-            var response = await _httpClient.GetFromJsonAsync<GoogleBooksResponse>(url, JsonOptions);
+            // GetAsync kullan — 429 durumunda ProcessSearchAsync'teki backoff'un çalışması için throw et
+            using var httpResponse = await _httpClient.GetAsync(url);
+            if (!httpResponse.IsSuccessStatusCode)
+                throw new HttpRequestException(
+                    $"HTTP {(int)httpResponse.StatusCode} hatası",
+                    null, httpResponse.StatusCode);
+
+            var response = await httpResponse.Content.ReadFromJsonAsync<GoogleBooksResponse>(JsonOptions);
 
             // Ham veri logu
             Console.WriteLine($"[API] Google'dan gelen ham veri adedi: {response?.Items?.Count ?? 0} (query: \"{query}\")");
@@ -181,6 +188,10 @@ public class GoogleBooksService : IGoogleBooksService
 
             Console.WriteLine($"[API] Filtreden geçen kitap adedi: {books.Count}");
             return books;
+        }
+        catch (HttpRequestException)
+        {
+            throw; // 429 ve diğer HTTP hatalarını ProcessSearchAsync'e ilet (backoff için)
         }
         catch (Exception ex)
         {
