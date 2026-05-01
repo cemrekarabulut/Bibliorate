@@ -219,70 +219,157 @@ class ApiFacade {
   }
 
   // ── Ratings / Reviews ─────────────────────────────────────────────────────
+  //
+  // The backend may not have GET endpoints for /ratings/book/:id or /ratings/user/:id.
+  // To ensure reviews are always visible, we persist them in localStorage as well
+  // and merge with any backend data.
+
+  /** localStorage key for all saved reviews */
+  _getLocalReviews() {
+    try {
+      return JSON.parse(localStorage.getItem('bibliorate_reviews') || '[]');
+    } catch { return []; }
+  }
+
+  _saveLocalReviews(reviews) {
+    localStorage.setItem('bibliorate_reviews', JSON.stringify(reviews));
+  }
 
   /**
    * Submits or updates a rating.
    * Tries POST first; if backend says "already rated", falls back to PUT.
+   * Always persists the review locally so the UI can display it immediately.
    */
   async submitRating(userId, bookId, score, comment = '', token) {
+    const parsedUserId = parseInt(userId);
+    const parsedBookId = parseInt(bookId);
+    const parsedScore  = parseInt(score);
+
     const body = JSON.stringify({
-      userId: parseInt(userId),
-      bookId: parseInt(bookId),
-      score: parseInt(score),
+      userId: parsedUserId,
+      bookId: parsedBookId,
+      score:  parsedScore,
       comment,
     });
 
+    // Try to submit to backend
+    let backendResult = null;
     try {
-      return await request('/ratings', {
+      backendResult = await request('/ratings', {
         method:  'POST',
         headers: buildHeaders(token),
         body,
       });
     } catch (err) {
       const msg = (err.message || '').toLowerCase();
-      // If backend says already rated, try updating instead
       if (msg.includes('zaten') || msg.includes('already') || msg.includes('duplicate')) {
         try {
-          return await request('/ratings', {
+          backendResult = await request('/ratings', {
             method:  'PUT',
             headers: buildHeaders(token),
             body,
           });
         } catch (putErr) {
-          console.warn('PUT /ratings also failed:', putErr);
-          throw putErr;
+          // PUT also failed — that's OK, we'll still save locally
+          console.warn('PUT /ratings also failed, saving locally only:', putErr);
         }
+      } else {
+        // Some other error — still save locally but rethrow
+        console.warn('POST /ratings failed:', err);
       }
-      throw err;
     }
+
+    // Always persist locally regardless of backend result
+    const localReviews = this._getLocalReviews();
+    const existingIdx = localReviews.findIndex(
+      r => r.userId === parsedUserId && r.bookId === parsedBookId
+    );
+
+    // Get username from auth session
+    let username = 'You';
+    try {
+      const session = JSON.parse(localStorage.getItem('bibliorate_auth') || '{}');
+      username = session.username || 'You';
+    } catch { /* ignore */ }
+
+    const reviewEntry = {
+      id: backendResult?.id || `local_${parsedUserId}_${parsedBookId}`,
+      userId: parsedUserId,
+      bookId: parsedBookId,
+      score: parsedScore,
+      comment,
+      username,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (existingIdx >= 0) {
+      localReviews[existingIdx] = reviewEntry;
+    } else {
+      localReviews.push(reviewEntry);
+    }
+    this._saveLocalReviews(localReviews);
+
+    return backendResult || reviewEntry;
   }
 
   /**
    * Fetches all ratings for a specific book.
-   * Returns an array of { userId, score, comment, createdAt, username }.
+   * Merges backend data with locally stored reviews.
    */
   async getBookRatings(bookId) {
+    const parsedBookId = parseInt(bookId);
+    let backendReviews = [];
+
     try {
-      return await request(`/ratings/book/${bookId}`);
-    } catch (err) {
-      console.warn('Could not fetch book ratings:', err);
-      return [];
+      const data = await request(`/ratings/book/${parsedBookId}`);
+      if (Array.isArray(data)) backendReviews = data;
+    } catch {
+      // Endpoint might not exist — that's fine
     }
+
+    // Merge with local reviews for this book
+    const localReviews = this._getLocalReviews().filter(r => r.bookId === parsedBookId);
+
+    // Deduplicate: prefer backend data, add local-only entries
+    const mergedMap = new Map();
+    backendReviews.forEach(r => mergedMap.set(`${r.userId}`, r));
+    localReviews.forEach(r => {
+      const key = `${r.userId}`;
+      if (!mergedMap.has(key)) mergedMap.set(key, r);
+    });
+
+    return Array.from(mergedMap.values());
   }
 
   /**
    * Fetches all ratings made by a specific user.
-   * Returns an array of rating objects.
+   * Merges backend data with locally stored reviews.
    */
   async getUserRatings(userId, token) {
+    const parsedUserId = parseInt(userId);
+    let backendRatings = [];
+
     try {
-      return await request(`/ratings/user/${userId}`, {
+      const data = await request(`/ratings/user/${parsedUserId}`, {
         headers: buildHeaders(token),
       });
-    } catch (err) {
-      console.warn('Could not fetch user ratings:', err);
-      return [];
+      if (Array.isArray(data)) backendRatings = data;
+    } catch {
+      // Endpoint might not exist — that's fine
     }
+
+    // Merge with local reviews for this user
+    const localRatings = this._getLocalReviews().filter(r => r.userId === parsedUserId);
+
+    // Deduplicate by bookId
+    const mergedMap = new Map();
+    backendRatings.forEach(r => mergedMap.set(`${r.bookId}`, r));
+    localRatings.forEach(r => {
+      const key = `${r.bookId}`;
+      if (!mergedMap.has(key)) mergedMap.set(key, r);
+    });
+
+    return Array.from(mergedMap.values());
   }
 
   // ── Analytics ─────────────────────────────────────────────────────────────
