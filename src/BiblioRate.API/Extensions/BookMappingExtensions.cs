@@ -17,8 +17,14 @@ public static class BookMappingExtensions
     ///   <item>ThumbnailUrl Smart Sanitize + OpenLibrary fallback zinciriyle döner.</item>
     /// </list>
     /// </summary>
-    public static BookDto ToDto(this Book book, double ratingAvg = 0.0, int ratingCount = 0)
+    public static BookDto ToDto(this Book book)
     {
+        // Eagerly loaded Ratings koleksiyonundan direkt hesapla
+        var ratingAvg   = book.Ratings?.Any() == true
+                            ? Math.Round(book.Ratings.Average(r => (double)r.Score), 1)
+                            : 0.0;
+        var ratingCount = book.Ratings?.Count ?? 0;
+
         return new BookDto
         {
             BookId        = book.BookId,
