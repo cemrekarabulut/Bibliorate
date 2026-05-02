@@ -47,7 +47,15 @@ public class FavoritesController : ControllerBase
         var favorites = await _favoriteRepository.GetUserFavoritesAsync(userId);
         return Ok(favorites
             .Where(f => f.Book is not null)
-            .Select(f => f.Book!.ToDto()));
+            .Select(f =>
+            {
+                var book    = f.Book!;
+                var ratings = book.Ratings ?? [];
+                var avg     = ratings.Any() ? ratings.Average(r => (double)r.Score) : 0.0;
+                var count   = ratings.Count;
+                var reviewCount = book.Reviews?.Count ?? 0;
+                return book.ToDto(Math.Round(avg, 1), count);
+            }));
     }
 
     /// <summary>Kitabı favorilerden çıkarır.</summary>

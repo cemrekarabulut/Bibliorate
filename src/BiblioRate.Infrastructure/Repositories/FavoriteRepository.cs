@@ -37,6 +37,9 @@ public class FavoriteRepository : IFavoriteRepository
         return await _context.Favorites
             .Where(f => f.UserId == userId)
             .Include(f => f.Book)
+                .ThenInclude(b => b!.Ratings)   // puan ortalaması için gerekli
+            .Include(f => f.Book)
+                .ThenInclude(b => b!.Reviews)   // yorum sayısı için gerekli
             .ToListAsync();
     }
 
