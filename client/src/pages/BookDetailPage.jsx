@@ -41,7 +41,7 @@ const BookDetailPage = () => {
           id:        r.reviewId ?? r.id,
           userId:    r.userId,
           username:  r.username ?? r.userName ?? `User #${r.userId}`,
-          score:     r.score,          // yoksa undefined — sorun değil
+          score:     r.score,
           comment:   r.comment,
           createdAt: r.createdAt,
         }));
@@ -62,9 +62,30 @@ const BookDetailPage = () => {
     }
   }, [id, userId]);
 
+  // ── Favori durumunu kontrol et ──────────────────────────────────────────
+  const checkFavouriteStatus = useCallback(async () => {
+    if (!isLoggedIn || !userId || !token) {
+      setIsFavourite(false);
+      return;
+    }
+    try {
+      const favs = await apiFacade.getFavorites(userId, token);
+      const bookId = Number(id);
+      setIsFavourite(favs.some(f => f.id === bookId));
+    } catch {
+      setIsFavourite(false);
+    }
+  }, [id, isLoggedIn, userId, token]);
+
   useEffect(() => {
     fetchBookData();
   }, [fetchBookData]);
+
+  useEffect(() => {
+    checkFavouriteStatus();
+  }, [checkFavouriteStatus]);
+
+
 
   // ── Favourite toggle ────────────────────────────────────────────────────
 
