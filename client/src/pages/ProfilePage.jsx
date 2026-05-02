@@ -41,31 +41,31 @@ const ProfilePage = () => {
         const ratings = Array.isArray(ratingsData) ? ratingsData : [];
         setUserReviews(ratings);
 
-        // For each rating, try to fetch the book details
+        // Her rating için kitap detayını çekmeye çalış
         if (ratings.length > 0) {
           const bookPromises = ratings.map(async (r) => {
             try {
-              const book = await apiFacade.getBookById(r.bookId, userId);
+              const book = await apiFacade.getBookById(r.bookId ?? r.bookId, userId);
               return {
                 ...book,
-                // kitabın gerçek ortalamasını koru, kullanıcı puanını ayrı sakla
-                rating: book.rating,
-                userScore: r.score,
+                rating:      book.rating,   // kitabın gerçek ortalaması
+                userScore:   r.score,
                 userComment: r.comment,
-                reviewDate: r.createdAt,
+                reviewDate:  r.createdAt,
               };
             } catch {
+              // Kitap verisi gelmese de rating bilgisini göster
               return {
-                id: r.bookId,
-                title: `Book #${r.bookId}`,
-                author: 'Unknown',
-                genre: 'General',
-                coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
-                rating: 0,
-                reviews: 0,
-                userScore: r.score,
+                id:          r.bookId,
+                title:       `Book #${r.bookId}`,
+                author:      'Unknown',
+                genre:       'General',
+                coverUrl:    'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
+                rating:      0,
+                reviews:     0,
+                userScore:   r.score,
                 userComment: r.comment,
-                reviewDate: r.createdAt,
+                reviewDate:  r.createdAt,
               };
             }
           });
