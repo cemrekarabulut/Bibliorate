@@ -109,10 +109,9 @@ const BookDetailPage = () => {
   }
 
   // Use live review count if we fetched reviews
-  const liveReviewCount = reviews.length > 0 ? reviews.length : book.reviews;
-  const liveRating = reviews.length > 0
-    ? reviews.reduce((sum, r) => sum + (r.score || 0), 0) / reviews.length
-    : book.rating;
+  const liveReviewCount = book.reviews > 0 ? book.reviews : reviews.length;
+  // Rating is pre-calculated by the backend and returned in the book object
+  const liveRating = book.rating;
 
   // Check if current user already reviewed this book
   const userExistingReview = isLoggedIn
@@ -214,10 +213,12 @@ const BookDetailPage = () => {
                     <User size={18} />
                     <span className="review-username">{review.username || review.userName || `User #${review.userId}`}</span>
                   </div>
-                  <div className="review-score">
-                    <Star size={16} fill="#fbbf24" stroke="#fbbf24" />
-                    <span>{review.score}/10</span>
-                  </div>
+                  {review.score !== undefined && (
+                    <div className="review-score">
+                      <Star size={16} fill="#fbbf24" stroke="#fbbf24" />
+                      <span>{review.score}/10</span>
+                    </div>
+                  )}
                 </div>
                 {review.comment && (
                   <p className="review-comment">{review.comment}</p>
