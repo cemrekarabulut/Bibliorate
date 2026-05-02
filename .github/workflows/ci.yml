@@ -2,7 +2,11 @@ name: Bibliorate CI Pipeline
 
 on:
   push:
-    branches: [ "main", "cemre" ]
+    branches:
+      - main           # Production — stabil branch
+      - cemre          # Cemre Karabulut  (Backend & API)
+      - caglar-branch  # Çağlar Mesci     (Frontend UI/UX)
+      - berra          # Berra Senem Mıynat (Flask Analytics)
   pull_request:
     branches: [ "main" ]
 
