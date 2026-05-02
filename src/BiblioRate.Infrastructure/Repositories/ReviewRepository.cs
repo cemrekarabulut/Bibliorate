@@ -29,6 +29,21 @@ public class ReviewRepository : IReviewRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Review>> GetReviewsByUserIdAsync(int userId)
+    {
+        return await _context.Reviews
+            .Where(r => r.UserId == userId)
+            .Include(r => r.User)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task UpdateReviewAsync(Review review)
+    {
+        _context.Reviews.Update(review);
+        await _context.SaveChangesAsync();
+    }
+
     public async Task DeleteReviewAsync(int reviewId)
     {
         var review = await _context.Reviews.FindAsync(reviewId);

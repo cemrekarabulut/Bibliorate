@@ -13,4 +13,6 @@ public class CreateRatingRequest
 
     [Required, Range(1, 10, ErrorMessage = "Puan 1 ile 10 arasında olmalıdır.")]
     public int Score { get; set; }
+
+    public string? Comment { get; set; }
 }
