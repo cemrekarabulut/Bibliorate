@@ -39,7 +39,10 @@ public class BooksController : ControllerBase
     public async Task<ActionResult<IEnumerable<BookDto>>> GetLocalBooks()
     {
         var books = await _bookRepository.GetAllBooksAsync();
-        return Ok(books.Select(b => b.ToDto()));
+        return Ok(books.Select(b => b.ToDto(
+            ratingAvg: b.Ratings != null && b.Ratings.Any() ? Math.Round(b.Ratings.Average(r => (double)r.Score), 1) : 0.0,
+            ratingCount: b.Ratings?.Count ?? 0
+        )));
     }
 
     /// <summary>Belirli bir kitabı getirir ve görüntülenme kaydı oluşturur.</summary>

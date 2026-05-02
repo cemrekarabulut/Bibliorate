@@ -17,13 +17,13 @@ public static class BookMappingExtensions
     ///   <item>ThumbnailUrl Smart Sanitize + OpenLibrary fallback zinciriyle döner.</item>
     /// </list>
     /// </summary>
-    public static BookDto ToDto(this Book book)
+    public static BookDto ToDto(this Book book, double? ratingAvg = null, int? ratingCount = null)
     {
         // Eagerly loaded Ratings koleksiyonundan direkt hesapla
-        var ratingAvg   = book.Ratings?.Any() == true
+        var finalRatingAvg   = ratingAvg ?? (book.Ratings?.Any() == true
                             ? Math.Round(book.Ratings.Average(r => (double)r.Score), 1)
-                            : 0.0;
-        var ratingCount = book.Ratings?.Count ?? 0;
+                            : 0.0);
+        var finalRatingCount = ratingCount ?? (book.Ratings?.Count ?? 0);
         var reviewCount = book.Reviews?.Count ?? 0;
 
         return new BookDto
@@ -39,9 +39,9 @@ public static class BookMappingExtensions
             ThumbnailUrl  = ResolveThumbnail(book.ThumbnailUrl, book.Isbn),
 
             // Puan alanları — her iki field name ile frontend'e gönderiliyor
-            RatingAvg     = ratingAvg,
-            AverageRating = ratingAvg,
-            RatingCount   = ratingCount,
+            RatingAvg     = finalRatingAvg,
+            AverageRating = finalRatingAvg,
+            RatingCount   = finalRatingCount,
             ReviewCount   = reviewCount,
 
             // Tür — Seeder'ın AuthorGenreMap'ten belirlediği değeri taşır
