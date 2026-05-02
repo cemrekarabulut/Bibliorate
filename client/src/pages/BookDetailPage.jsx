@@ -108,8 +108,8 @@ const BookDetailPage = () => {
     );
   }
 
-  // Use live review count if we fetched reviews
-  const liveReviewCount = book.reviews > 0 ? book.reviews : reviews.length;
+  // Use the exact number of fetched/merged text reviews to ensure header matches the rendered cards.
+  const liveReviewCount = reviews.length;
   // Rating is pre-calculated by the backend and returned in the book object
   const liveRating = book.rating;
 

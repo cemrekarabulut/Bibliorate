@@ -278,63 +278,59 @@ class ApiFacade {
     const parsedBookId = parseInt(bookId);
     const parsedScore  = parseInt(score);
 
-    // 1. Submit the numeric score to /ratings
+    // 1. Submit rating to /ratings
     const ratingBody = JSON.stringify({
       userId: parsedUserId,
       bookId: parsedBookId,
-      score:  parsedScore,
+      score: parsedScore,
+      comment: comment.trim() !== '' ? comment.trim() : undefined
     });
 
     let backendResult = null;
+    let backendSuccess = false;
+
     try {
       backendResult = await request('/ratings', {
         method:  'POST',
         headers: buildHeaders(token),
         body:    ratingBody,
       });
+      backendSuccess = true;
     } catch (err) {
       const msg = (err.message || '').toLowerCase();
-      if (msg.includes('zaten') || msg.includes('already') || msg.includes('duplicate')) {
+      // If 409 Conflict, it means we already rated, so try PUT.
+      if (msg.includes('zaten') || msg.includes('already') || msg.includes('duplicate') || msg.includes('409')) {
         try {
-          // If backend adds PUT /ratings later, this handles it. Currently it doesn't exist,
-          // but we keep the fallback structure just in case.
           backendResult = await request('/ratings', {
             method:  'PUT',
             headers: buildHeaders(token),
             body:    ratingBody,
           });
+          backendSuccess = true;
         } catch (putErr) {
-          console.warn('PUT /ratings failed, skipping backend score update:', putErr);
+          console.warn('PUT /ratings failed:', putErr);
         }
       } else {
         console.warn('POST /ratings failed:', err);
       }
     }
 
-    // 2. If there's a comment, submit it to /reviews
-    if (comment && comment.trim() !== '') {
-      const reviewBody = JSON.stringify({
-        userId: parsedUserId,
-        bookId: parsedBookId,
-        comment: comment.trim(),
-      });
-      try {
-        await request('/reviews', {
-          method:  'POST',
-          headers: buildHeaders(token),
-          body:    reviewBody,
-        });
-      } catch (revErr) {
-        console.warn('POST /reviews failed:', revErr);
-      }
-    }
-
-    // Always persist locally to update UI immediately
     const localReviews = this._getLocalReviews();
     const existingIdx = localReviews.findIndex(
       r => r.userId === parsedUserId && r.bookId === parsedBookId
     );
 
+    if (backendSuccess) {
+      // Backend successfully saved! We DO NOT NEED local storage.
+      // Remove any existing local review for this book to prevent double counting.
+      if (existingIdx >= 0) {
+        localReviews.splice(existingIdx, 1);
+        this._saveLocalReviews(localReviews);
+      }
+      return backendResult;
+    }
+
+    // --- FALLBACK LOGIC IF BACKEND FAILS ---
     let username = 'You';
     try {
       const session = JSON.parse(localStorage.getItem('bibliorate_auth') || '{}');
@@ -342,7 +338,7 @@ class ApiFacade {
     } catch { /* ignore */ }
 
     const reviewEntry = {
-      id: backendResult?.ratingId || `local_${parsedUserId}_${parsedBookId}`,
+      id: `local_${parsedUserId}_${parsedBookId}`,
       userId: parsedUserId,
       bookId: parsedBookId,
       score: parsedScore,
@@ -358,7 +354,7 @@ class ApiFacade {
     }
     this._saveLocalReviews(localReviews);
 
-    return backendResult || reviewEntry;
+    return reviewEntry;
   }
 
   /**
