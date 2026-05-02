@@ -24,10 +24,13 @@ public class BookRepository : IBookRepository
             .ToListAsync();
     }
 
-    /// <summary>FindAsync PK üzerinden çalıştığı için FirstOrDefault'tan daha performanslıdır.</summary>
     public async Task<Book?> GetByIdAsync(int id)
     {
-        return await _context.Books.FindAsync(id);
+        // FindAsync, Include'u desteklemez — Ratings ve Reviews için FirstOrDefaultAsync kullanılır
+        return await _context.Books
+            .Include(b => b.Ratings)
+            .Include(b => b.Reviews)
+            .FirstOrDefaultAsync(b => b.BookId == id);
     }
 
     public async Task AddBookAsync(Book book)
