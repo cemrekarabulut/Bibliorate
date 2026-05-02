@@ -78,7 +78,8 @@ const normaliseBook = (dto) => ({
   description: dto.description ?? '',
   coverUrl:    dto.thumbnailUrl ?? 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
   rating:      dto.averageRating ?? dto.ratingAvg ?? 0,
-  reviews:     dto.reviewCount ?? dto.ratingCount ?? 0,
+  // reviewCount API list endpoint'inde hep 0 gelir; ratingCount daha güvenilir
+  reviews:     (dto.reviewCount && dto.reviewCount > 0) ? dto.reviewCount : (dto.ratingCount ?? 0),
   ratingCount: dto.ratingCount ?? 0,
   reviewList:  dto.reviews ?? [],
 });
@@ -248,35 +249,28 @@ class ApiFacade {
    * even on the discovery/main page without refreshing from the backend.
    */
   _augmentBooksWithLocalRatings(books) {
+    // Backend artık çalışıyor — localStorage augmentation'ı devre dışı.
+    // Sadece backend'de olmayan fallback veriler için local reviews'ı ekle.
     const localReviews = this._getLocalReviews();
     if (!localReviews.length) return books;
 
     return books.map(book => {
+      // Backend'den gelen rating varsa localStorage'ı kullanma
+      if (book.ratingCount > 0 || book.rating > 0) return book;
+
+      // Sadece backend'de hiç rating yoksa local fallback uygula
       const bookLocalReviews = localReviews.filter(r => r.bookId === book.id);
       if (!bookLocalReviews.length) return book;
 
-      let count = book.ratingCount > 0 ? book.ratingCount : (book.rating > 0 ? book.reviews : 0);
-      let totalScore = book.rating * count;
-      let reviewTextCount = book.reviews;
-      
-      if (count === 0) {
-        totalScore = 0;
-        count = 0;
-      }
-
-      bookLocalReviews.forEach(r => {
-        totalScore += r.score;
-        count += 1;
-        if (r.comment && r.comment.trim() !== '') {
-          reviewTextCount += 1;
-        }
-      });
+      const count = bookLocalReviews.length;
+      const totalScore = bookLocalReviews.reduce((sum, r) => sum + r.score, 0);
+      const reviewTextCount = bookLocalReviews.filter(r => r.comment && r.comment.trim() !== '').length;
 
       return {
         ...book,
         rating: count > 0 ? totalScore / count : 0,
         ratingCount: count,
-        reviews: reviewTextCount
+        reviews: reviewTextCount,
       };
     });
   }

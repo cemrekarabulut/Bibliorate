@@ -46,7 +46,14 @@ const ProfilePage = () => {
           const bookPromises = ratings.map(async (r) => {
             try {
               const book = await apiFacade.getBookById(r.bookId, userId);
-              return { ...book, userScore: r.score, userComment: r.comment, reviewDate: r.createdAt };
+              return {
+                ...book,
+                // kitabın gerçek ortalamasını koru, kullanıcı puanını ayrı sakla
+                rating: book.rating,
+                userScore: r.score,
+                userComment: r.comment,
+                reviewDate: r.createdAt,
+              };
             } catch {
               return {
                 id: r.bookId,
