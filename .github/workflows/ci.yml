@@ -8,7 +8,7 @@ on:
 
 # ─────────────────────────────────────────────────────────────
 #  Pipeline; üç bağımsız stack'i paralel doğrular:
-#    1) .NET 8 API         (src/)
+#    1) .NET 9 API         (src/)
 #    2) Python Flask       (analysis/)
 #    3) React Frontend     (client/)
 #  Ardından Docker build validasyonu ve isteğe bağlı push yapılır.
@@ -17,7 +17,7 @@ on:
 jobs:
 
   # ──────────────────────────────────────────
-  # JOB 1 — .NET 8 API (C# Backend)
+  # JOB 1 — .NET 9 API (C# Backend)
   # ──────────────────────────────────────────
   dotnet-ci:
     name: ".NET API — Build & Test"
@@ -27,10 +27,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8
+      - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Restore NuGet packages
         run: dotnet restore src/BiblioRate.sln
