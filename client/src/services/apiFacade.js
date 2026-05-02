@@ -280,15 +280,14 @@ class ApiFacade {
     const parsedBookId = parseInt(bookId);
     const parsedScore  = parseInt(score);
 
-    // 1. Submit rating to /ratings
     const ratingBody = JSON.stringify({
-      userId: parsedUserId,
-      bookId: parsedBookId,
-      score: parsedScore,
+      userId:  parsedUserId,
+      bookId:  parsedBookId,
+      score:   parsedScore,
       comment: comment.trim() !== '' ? comment.trim() : undefined
     });
 
-    let backendResult = null;
+    let backendResult  = null;
     let backendSuccess = false;
 
     try {
@@ -300,7 +299,6 @@ class ApiFacade {
       backendSuccess = true;
     } catch (err) {
       const msg = (err.message || '').toLowerCase();
-      // If 409 Conflict, it means we already rated, so try PUT.
       if (msg.includes('zaten') || msg.includes('already') || msg.includes('duplicate') || msg.includes('409')) {
         try {
           backendResult = await request('/ratings', {
@@ -317,11 +315,11 @@ class ApiFacade {
       }
     }
 
-    // 2. If there's a comment, submit it to /reviews just in case the backend is the old version
+    // Yorum varsa /reviews endpoint'ine de gönder
     if (comment && comment.trim() !== '') {
       const reviewBody = JSON.stringify({
-        userId: parsedUserId,
-        bookId: parsedBookId,
+        userId:  parsedUserId,
+        bookId:  parsedBookId,
         comment: comment.trim(),
       });
       try {
@@ -330,42 +328,32 @@ class ApiFacade {
           headers: buildHeaders(token),
           body:    reviewBody,
         });
-        // If this succeeds, then the comment was definitely saved by the backend
       } catch (revErr) {
         console.warn('POST /reviews failed:', revErr);
       }
     }
 
-    const localReviews = this._getLocalReviews();
-    const existingIdx = localReviews.findIndex(
-      r => r.userId === parsedUserId && r.bookId === parsedBookId
-    );
-
-    if (backendSuccess) {
-      // Backend successfully saved! We DO NOT NEED local storage.
-      // Remove any existing local review for this book to prevent double counting.
-      if (existingIdx >= 0) {
-        localReviews.splice(existingIdx, 1);
-        this._saveLocalReviews(localReviews);
-      }
-      return backendResult;
-    }
-
-    // --- FALLBACK LOGIC IF BACKEND FAILS ---
+    // localStorage'a her zaman yaz (profil sayfası bunu okuyacak)
     let username = 'You';
     try {
       const session = JSON.parse(localStorage.getItem('bibliorate_auth') || '{}');
       username = session.username || 'You';
     } catch { /* ignore */ }
 
+    const localReviews = this._getLocalReviews();
+    const existingIdx  = localReviews.findIndex(
+      r => r.userId === parsedUserId && r.bookId === parsedBookId
+    );
+
     const reviewEntry = {
-      id: `local_${parsedUserId}_${parsedBookId}`,
-      userId: parsedUserId,
-      bookId: parsedBookId,
-      score: parsedScore,
+      id:            `local_${parsedUserId}_${parsedBookId}`,
+      userId:        parsedUserId,
+      bookId:        parsedBookId,
+      score:         parsedScore,
       comment,
       username,
-      createdAt: new Date().toISOString(),
+      createdAt:     new Date().toISOString(),
+      backendSynced: backendSuccess,  // backend'e gitti mi?
     };
 
     if (existingIdx >= 0) {
@@ -375,7 +363,7 @@ class ApiFacade {
     }
     this._saveLocalReviews(localReviews);
 
-    return reviewEntry;
+    return backendResult ?? reviewEntry;
   }
 
   /**
@@ -430,19 +418,18 @@ class ApiFacade {
       });
       if (Array.isArray(data)) backendRatings = data;
     } catch {
-      // Endpoint might not exist — that's fine
+      // Endpoint hata verirse localStorage'a dön
     }
 
-    // Merge with local reviews for this user
+    // Her zaman localStorage ile birleştir
     const localRatings = this._getLocalReviews().filter(r => r.userId === parsedUserId);
 
-    // Deduplicate by bookId
+    // Backend verisi öncelikli, local sadece eksik olanları doldurur
     const mergedMap = new Map();
+    // önce localı ekle
+    localRatings.forEach(r => mergedMap.set(`${r.bookId}`, r));
+    // sonra backend üzerine yaz (daha güvenilir)
     backendRatings.forEach(r => mergedMap.set(`${r.bookId}`, r));
-    localRatings.forEach(r => {
-      const key = `${r.bookId}`;
-      if (!mergedMap.has(key)) mergedMap.set(key, r);
-    });
 
     return Array.from(mergedMap.values());
   }
