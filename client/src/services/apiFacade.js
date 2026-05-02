@@ -255,12 +255,18 @@ class ApiFacade {
       const bookLocalReviews = localReviews.filter(r => r.bookId === book.id);
       if (!bookLocalReviews.length) return book;
 
+      let count = book.ratingCount > 0 ? book.ratingCount : (book.rating > 0 ? book.reviews : 0);
+      let totalScore = book.rating * count;
       let reviewTextCount = book.reviews;
       
+      if (count === 0) {
+        totalScore = 0;
+        count = 0;
+      }
+
       bookLocalReviews.forEach(r => {
-        // Only augment text review count so the UI correctly reflects local comments.
-        // We do NOT augment the numerical rating score, letting the backend handle it,
-        // which prevents the rating from erroneously changing or double-counting on refresh.
+        totalScore += r.score;
+        count += 1;
         if (r.comment && r.comment.trim() !== '') {
           reviewTextCount += 1;
         }
@@ -268,6 +274,8 @@ class ApiFacade {
 
       return {
         ...book,
+        rating: count > 0 ? totalScore / count : 0,
+        ratingCount: count,
         reviews: reviewTextCount
       };
     });
@@ -312,6 +320,25 @@ class ApiFacade {
         }
       } else {
         console.warn('POST /ratings failed:', err);
+      }
+    }
+
+    // 2. If there's a comment, submit it to /reviews just in case the backend is the old version
+    if (comment && comment.trim() !== '') {
+      const reviewBody = JSON.stringify({
+        userId: parsedUserId,
+        bookId: parsedBookId,
+        comment: comment.trim(),
+      });
+      try {
+        await request('/reviews', {
+          method:  'POST',
+          headers: buildHeaders(token),
+          body:    reviewBody,
+        });
+        // If this succeeds, then the comment was definitely saved by the backend
+      } catch (revErr) {
+        console.warn('POST /reviews failed:', revErr);
       }
     }
 
@@ -366,8 +393,8 @@ class ApiFacade {
     let backendReviews = [];
 
     try {
-      // Use the new reviews endpoint which returns user comments
-      const data = await request(`/reviews/book/${parsedBookId}`);
+      // Use the ratings endpoint which merges both scores and comments from the backend
+      const data = await request(`/ratings/book/${parsedBookId}`);
       if (Array.isArray(data)) backendReviews = data;
     } catch {
       // Endpoint might not exist on live server yet — that's fine
