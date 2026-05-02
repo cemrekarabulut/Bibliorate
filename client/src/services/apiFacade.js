@@ -77,8 +77,9 @@ const normaliseBook = (dto) => ({
                  : 'General',
   description: dto.description ?? '',
   coverUrl:    dto.thumbnailUrl ?? 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
-  rating:      dto.ratingAvg   ?? 0,
-  reviews:     dto.ratingCount ?? 0,
+  rating:      dto.averageRating ?? dto.ratingAvg ?? 0,
+  reviews:     dto.reviewCount ?? dto.ratingCount ?? 0,
+  reviewList:  dto.reviews ?? [],
 });
 
 // ─── ApiFacade Class ──────────────────────────────────────────────────────────
@@ -278,57 +279,68 @@ class ApiFacade {
     });
   }
 
-  /**
-   * Submits or updates a rating.
-   * Tries POST first; if backend says "already rated", falls back to PUT.
-   * Always persists the review locally so the UI can display it immediately.
-   */
   async submitRating(userId, bookId, score, comment = '', token) {
     const parsedUserId = parseInt(userId);
     const parsedBookId = parseInt(bookId);
     const parsedScore  = parseInt(score);
 
-    const body = JSON.stringify({
+    // 1. Submit the numeric score to /ratings
+    const ratingBody = JSON.stringify({
       userId: parsedUserId,
       bookId: parsedBookId,
       score:  parsedScore,
-      comment,
     });
 
-    // Try to submit to backend
     let backendResult = null;
     try {
       backendResult = await request('/ratings', {
         method:  'POST',
         headers: buildHeaders(token),
-        body,
+        body:    ratingBody,
       });
     } catch (err) {
       const msg = (err.message || '').toLowerCase();
       if (msg.includes('zaten') || msg.includes('already') || msg.includes('duplicate')) {
         try {
+          // If backend adds PUT /ratings later, this handles it. Currently it doesn't exist,
+          // but we keep the fallback structure just in case.
           backendResult = await request('/ratings', {
             method:  'PUT',
             headers: buildHeaders(token),
-            body,
+            body:    ratingBody,
           });
         } catch (putErr) {
-          // PUT also failed — that's OK, we'll still save locally
-          console.warn('PUT /ratings also failed, saving locally only:', putErr);
+          console.warn('PUT /ratings failed, skipping backend score update:', putErr);
         }
       } else {
-        // Some other error — still save locally but rethrow
         console.warn('POST /ratings failed:', err);
       }
     }
 
-    // Always persist locally regardless of backend result
+    // 2. If there's a comment, submit it to /reviews
+    if (comment && comment.trim() !== '') {
+      const reviewBody = JSON.stringify({
+        userId: parsedUserId,
+        bookId: parsedBookId,
+        comment: comment.trim(),
+      });
+      try {
+        await request('/reviews', {
+          method:  'POST',
+          headers: buildHeaders(token),
+          body:    reviewBody,
+        });
+      } catch (revErr) {
+        console.warn('POST /reviews failed:', revErr);
+      }
+    }
+
+    // Always persist locally to update UI immediately
     const localReviews = this._getLocalReviews();
     const existingIdx = localReviews.findIndex(
       r => r.userId === parsedUserId && r.bookId === parsedBookId
     );
 
-    // Get username from auth session
     let username = 'You';
     try {
       const session = JSON.parse(localStorage.getItem('bibliorate_auth') || '{}');
@@ -336,7 +348,7 @@ class ApiFacade {
     } catch { /* ignore */ }
 
     const reviewEntry = {
-      id: backendResult?.id || `local_${parsedUserId}_${parsedBookId}`,
+      id: backendResult?.ratingId || `local_${parsedUserId}_${parsedBookId}`,
       userId: parsedUserId,
       bookId: parsedBookId,
       score: parsedScore,
@@ -357,17 +369,18 @@ class ApiFacade {
 
   /**
    * Fetches all ratings for a specific book.
-   * Merges backend data with locally stored reviews.
+   * Fetches from the new /reviews endpoint and merges with locally stored reviews.
    */
   async getBookRatings(bookId) {
     const parsedBookId = parseInt(bookId);
     let backendReviews = [];
 
     try {
-      const data = await request(`/ratings/book/${parsedBookId}`);
+      // Use the new reviews endpoint which returns user comments
+      const data = await request(`/reviews/book/${parsedBookId}`);
       if (Array.isArray(data)) backendReviews = data;
     } catch {
-      // Endpoint might not exist — that's fine
+      // Endpoint might not exist on live server yet — that's fine
     }
 
     // Merge with local reviews for this book
