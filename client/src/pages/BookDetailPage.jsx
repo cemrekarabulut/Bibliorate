@@ -29,12 +29,32 @@ const BookDetailPage = () => {
   const fetchBookData = useCallback(async () => {
     setLoading(true);
     try {
-      const [bookData, reviewData] = await Promise.all([
-        apiFacade.getBookById(Number(id), userId),
-        apiFacade.getBookRatings(Number(id)),
-      ]);
+      const bookData = await apiFacade.getBookById(Number(id), userId);
       setBook(bookData);
-      setReviews(Array.isArray(reviewData) ? reviewData : []);
+
+      // /api/books/{id} zaten reviews array'ini döndürüyor — önce onu kullan
+      const embeddedReviews = bookData.reviewList ?? [];
+
+      if (embeddedReviews.length > 0) {
+        // Backend'in /api/books/{id} içindeki reviews formatını normalize et
+        const normalised = embeddedReviews.map(r => ({
+          id:        r.reviewId ?? r.id,
+          userId:    r.userId,
+          username:  r.username ?? r.userName ?? `User #${r.userId}`,
+          score:     r.score,          // yoksa undefined — sorun değil
+          comment:   r.comment,
+          createdAt: r.createdAt,
+        }));
+        setReviews(normalised);
+      } else {
+        // Fallback: ayrı ratings endpoint'i dene
+        try {
+          const reviewData = await apiFacade.getBookRatings(Number(id));
+          setReviews(Array.isArray(reviewData) ? reviewData : []);
+        } catch {
+          setReviews([]);
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch book:', error);
     } finally {
