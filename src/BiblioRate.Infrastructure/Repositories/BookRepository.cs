@@ -17,6 +17,7 @@ public class BookRepository : IBookRepository
     public async Task<IEnumerable<Book>> GetAllBooksAsync()
     {
         return await _context.Books
+            .Include(b => b.Ratings)  // Rating verileri frontend'e düşsün diye eager load
             .Where(b => !b.IsDeleted) // Yedek güvenlik - Context Query filter kullanılıyor olsa da DB sorgusunda garanti eder
             .OrderByDescending(b => b.QualityScore)
             .ThenByDescending(b => b.Ratings.Any() ? b.Ratings.Average(r => (double)r.Score) : 0)
