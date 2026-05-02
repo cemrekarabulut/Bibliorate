@@ -255,23 +255,12 @@ class ApiFacade {
       const bookLocalReviews = localReviews.filter(r => r.bookId === book.id);
       if (!bookLocalReviews.length) return book;
 
-      // We MUST use the actual rating count for math, not the text review count
-      let count = book.ratingCount > 0 ? book.ratingCount : (book.rating > 0 ? book.reviews : 0);
-      let totalScore = book.rating * count;
       let reviewTextCount = book.reviews;
       
-      // If the backend returned 0 ratings, we can just use our local ones directly
-      if (count === 0) {
-        totalScore = 0;
-        count = 0;
-      }
-
       bookLocalReviews.forEach(r => {
-        // Note: this naively assumes the backend hasn't already included this rating.
-        // If it has, the rating gets slightly skewed until localStorage is cleared,
-        // but it ensures the UI feels responsive.
-        totalScore += r.score;
-        count += 1;
+        // Only augment text review count so the UI correctly reflects local comments.
+        // We do NOT augment the numerical rating score, letting the backend handle it,
+        // which prevents the rating from erroneously changing or double-counting on refresh.
         if (r.comment && r.comment.trim() !== '') {
           reviewTextCount += 1;
         }
@@ -279,8 +268,6 @@ class ApiFacade {
 
       return {
         ...book,
-        rating: count > 0 ? totalScore / count : 0,
-        ratingCount: count,
         reviews: reviewTextCount
       };
     });
@@ -398,7 +385,15 @@ class ApiFacade {
     backendReviews.forEach(r => mergedMap.set(`${r.userId}`, r));
     localReviews.forEach(r => {
       const key = `${r.userId}`;
-      if (!mergedMap.has(key)) mergedMap.set(key, r);
+      if (!mergedMap.has(key)) {
+        mergedMap.set(key, r);
+      } else {
+        // If backend returned a review but it has no comment, and local DOES have a comment, use local!
+        const existing = mergedMap.get(key);
+        if (!existing.comment && r.comment) {
+          mergedMap.set(key, r);
+        }
+      }
     });
 
     return Array.from(mergedMap.values());
