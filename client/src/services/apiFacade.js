@@ -258,6 +258,7 @@ class ApiFacade {
       // We MUST use the actual rating count for math, not the text review count
       let count = book.ratingCount > 0 ? book.ratingCount : (book.rating > 0 ? book.reviews : 0);
       let totalScore = book.rating * count;
+      let reviewTextCount = book.reviews;
       
       // If the backend returned 0 ratings, we can just use our local ones directly
       if (count === 0) {
@@ -271,12 +272,16 @@ class ApiFacade {
         // but it ensures the UI feels responsive.
         totalScore += r.score;
         count += 1;
+        if (r.comment && r.comment.trim() !== '') {
+          reviewTextCount += 1;
+        }
       });
 
       return {
         ...book,
         rating: count > 0 ? totalScore / count : 0,
-        reviews: count
+        ratingCount: count,
+        reviews: reviewTextCount
       };
     });
   }
