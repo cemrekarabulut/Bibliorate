@@ -49,12 +49,12 @@ public class FavoritesController : ControllerBase
             .Where(f => f.Book is not null)
             .Select(f =>
             {
-                var book    = f.Book!;
-                var ratings = book.Ratings ?? [];
-                var avg     = ratings.Any() ? ratings.Average(r => (double)r.Score) : 0.0;
-                var count   = ratings.Count;
+                var book        = f.Book!;
+                var ratings     = book.Ratings ?? [];
+                var avg         = ratings.Any() ? ratings.Average(r => (double)r.Score) : 0.0;
+                var ratingCount = ratings.Count;
                 var reviewCount = book.Reviews?.Count ?? 0;
-                return book.ToDto(Math.Round(avg, 1), count);
+                return book.ToDto(Math.Round(avg, 1), ratingCount, reviewCount);
             }));
     }
 

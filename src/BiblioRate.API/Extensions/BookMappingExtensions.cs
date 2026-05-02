@@ -17,7 +17,7 @@ public static class BookMappingExtensions
     ///   <item>ThumbnailUrl Smart Sanitize + OpenLibrary fallback zinciriyle döner.</item>
     /// </list>
     /// </summary>
-    public static BookDto ToDto(this Book book, double ratingAvg = 0.0, int ratingCount = 0)
+    public static BookDto ToDto(this Book book, double ratingAvg = 0.0, int ratingCount = 0, int reviewCount = 0)
     {
         return new BookDto
         {
@@ -27,16 +27,11 @@ public static class BookMappingExtensions
                                 ? []
                                 : [.. book.Author.Split(',', StringSplitOptions.TrimEntries)],
             Description   = book.Description,
-
-            // DB'deki URL için tam fallback zinciri: bad-URL tespiti → OpenLibrary → placehold.co
             ThumbnailUrl  = ResolveThumbnail(book.ThumbnailUrl, book.Isbn),
-
-            // Puan alanları — her iki field name ile frontend'e gönderiliyor
             RatingAvg     = ratingAvg,
             AverageRating = ratingAvg,
             RatingCount   = ratingCount,
-
-            // Tür — Seeder'ın AuthorGenreMap'ten belirlediği değeri taşır
+            ReviewCount   = reviewCount,
             Genre         = book.Genre,
             Categories    = string.IsNullOrEmpty(book.Genre)
                                 ? []

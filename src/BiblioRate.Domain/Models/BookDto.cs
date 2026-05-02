@@ -30,6 +30,9 @@ public class BookDto
     [JsonPropertyName("ratingCount")]
     public int RatingCount { get; set; }
 
+    [JsonPropertyName("reviewCount")]
+    public int ReviewCount { get; set; }
+
     [JsonPropertyName("categories")]
     public List<string> Categories { get; set; } = [];
 

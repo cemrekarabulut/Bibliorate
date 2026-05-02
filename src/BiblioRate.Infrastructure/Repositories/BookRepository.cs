@@ -17,7 +17,9 @@ public class BookRepository : IBookRepository
     public async Task<IEnumerable<Book>> GetAllBooksAsync()
     {
         return await _context.Books
-            .Where(b => !b.IsDeleted) // Yedek güvenlik - Context Query filter kullanılıyor olsa da DB sorgusunda garanti eder
+            .Where(b => !b.IsDeleted)
+            .Include(b => b.Ratings)
+            .Include(b => b.Reviews)
             .OrderByDescending(b => b.QualityScore)
             .ThenByDescending(b => b.Ratings.Any() ? b.Ratings.Average(r => (double)r.Score) : 0)
             .ToListAsync();
@@ -26,7 +28,12 @@ public class BookRepository : IBookRepository
     /// <summary>FindAsync PK üzerinden çalıştığı için FirstOrDefault'tan daha performanslıdır.</summary>
     public async Task<Book?> GetByIdAsync(int id)
     {
-        return await _context.Books.FindAsync(id);
+        return await _context.Books
+            .Include(b => b.Ratings)
+                .ThenInclude(r => r.User)
+            .Include(b => b.Reviews)
+                .ThenInclude(r => r.User)
+            .FirstOrDefaultAsync(b => b.BookId == id && !b.IsDeleted);
     }
 
     public async Task AddBookAsync(Book book)

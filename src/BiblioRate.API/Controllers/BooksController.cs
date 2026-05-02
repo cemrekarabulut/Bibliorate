@@ -39,7 +39,13 @@ public class BooksController : ControllerBase
     public async Task<ActionResult<IEnumerable<BookDto>>> GetLocalBooks()
     {
         var books = await _bookRepository.GetAllBooksAsync();
-        return Ok(books.Select(b => b.ToDto()));
+        return Ok(books.Select(b =>
+        {
+            var avg     = b.Ratings.Any() ? Math.Round(b.Ratings.Average(r => (double)r.Score), 1) : 0.0;
+            var rCount  = b.Ratings.Count;
+            var rvCount = b.Reviews.Count;
+            return b.ToDto(avg, rCount, rvCount);
+        }));
     }
 
     /// <summary>Belirli bir kitabı getirir ve görüntülenme kaydı oluşturur.</summary>
@@ -57,7 +63,13 @@ public class BooksController : ControllerBase
             ViewedAt = DateTime.UtcNow
         });
 
-        return Ok(book.ToDto());
+        var avg     = book.Ratings.Any() ? Math.Round(book.Ratings.Average(r => (double)r.Score), 1) : 0.0;
+        var rCount  = book.Ratings.Count;
+        var rvCount = book.Reviews.Count;
+
+        // Reviews detaylı listeyi de ekle (/api/books/{id} sayfası için)
+        var dto = book.ToDto(avg, rCount, rvCount);
+        return Ok(dto);
     }
 
     /// <summary>Kitap arar: yerel DB + Google Books API.</summary>
@@ -86,9 +98,13 @@ public class BooksController : ControllerBase
         {
             LocalResults  = localBooks
                 .Where(b => b.Title.Contains(q, StringComparison.OrdinalIgnoreCase))
-                .Select(b => b.ToDto()),
-
-            // FIX: Google Books da ToDto() ile map'leniyor — navigation property'ler expose edilmez
+                .Select(b =>
+                {
+                    var avg     = b.Ratings.Any() ? Math.Round(b.Ratings.Average(r => (double)r.Score), 1) : 0.0;
+                    var rCount  = b.Ratings.Count;
+                    var rvCount = b.Reviews.Count;
+                    return b.ToDto(avg, rCount, rvCount);
+                }),
             GlobalResults = googleBooks.Select(b => b.ToDto())
         });
     }
