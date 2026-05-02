@@ -39,4 +39,7 @@ public class BookDto
     /// <summary>Frontend'in beklediği tür alanı (genre).</summary>
     [JsonPropertyName("genre")]
     public string Genre { get; set; } = string.Empty;
+
+    [JsonPropertyName("reviews")]
+    public List<ReviewDto> Reviews { get; set; } = [];
 }

@@ -30,6 +30,7 @@ public class BookRepository : IBookRepository
         return await _context.Books
             .Include(b => b.Ratings)
             .Include(b => b.Reviews)
+                .ThenInclude(r => r.User)
             .FirstOrDefaultAsync(b => b.BookId == id);
     }
 

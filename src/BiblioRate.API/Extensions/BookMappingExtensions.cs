@@ -48,7 +48,16 @@ public static class BookMappingExtensions
             Genre         = book.Genre,
             Categories    = string.IsNullOrEmpty(book.Genre)
                                 ? []
-                                : [book.Genre]
+                                : [book.Genre],
+
+            Reviews       = book.Reviews?.Select(r => new ReviewDto
+            {
+                ReviewId  = r.ReviewId,
+                UserId    = r.UserId,
+                Username  = r.User?.Username ?? "Unknown User",
+                Comment   = r.Comment,
+                CreatedAt = r.CreatedAt
+            }).OrderByDescending(r => r.CreatedAt).ToList() ?? []
         };
     }
 
