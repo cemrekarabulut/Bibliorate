@@ -16,7 +16,19 @@ public class ReviewRepository : IReviewRepository
 
     public async Task AddReviewAsync(Review review)
     {
-        await _context.Reviews.AddAsync(review);
+        var existing = await _context.Reviews
+            .FirstOrDefaultAsync(r => r.UserId == review.UserId && r.BookId == review.BookId);
+        
+        if (existing != null)
+        {
+            existing.Comment   = review.Comment;
+            existing.CreatedAt = DateTime.UtcNow;
+            _context.Reviews.Update(existing);
+        }
+        else
+        {
+            await _context.Reviews.AddAsync(review);
+        }
         await _context.SaveChangesAsync();
     }
 
