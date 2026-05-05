@@ -79,7 +79,9 @@ const normaliseBook = (dto) => ({
   coverUrl:    dto.thumbnailUrl ?? 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
   rating:      dto.averageRating ?? dto.ratingAvg ?? 0,
   // reviewCount API list endpoint'inde hep 0 gelir; ratingCount daha güvenilir
-  reviews:     dto.reviewCount ?? 0,
+  // reviewCount: favoriler endpoint'i Reviews'ı yüklemeyebilir (backend yavaş deploy olur).
+  // reviewCount > 0 ise doğru değeri kullan; 0 ise ratingCount ile fallback yap.
+  reviews:     dto.reviewCount > 0 ? dto.reviewCount : (dto.ratingCount ?? 0),
   ratingCount: dto.ratingCount ?? 0,
   reviewList:  dto.reviews ?? [],
 });
