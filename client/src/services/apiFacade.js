@@ -79,7 +79,7 @@ const normaliseBook = (dto) => ({
   coverUrl:    dto.thumbnailUrl ?? 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600',
   rating:      dto.averageRating ?? dto.ratingAvg ?? 0,
   // reviewCount API list endpoint'inde hep 0 gelir; ratingCount daha güvenilir
-  reviews:     (dto.reviewCount && dto.reviewCount > 0) ? dto.reviewCount : (dto.ratingCount ?? 0),
+  reviews:     dto.reviewCount ?? 0,
   ratingCount: dto.ratingCount ?? 0,
   reviewList:  dto.reviews ?? [],
 });
@@ -315,23 +315,9 @@ class ApiFacade {
       }
     }
 
-    // Yorum varsa /reviews endpoint'ine de gönder
-    if (comment && comment.trim() !== '') {
-      const reviewBody = JSON.stringify({
-        userId:  parsedUserId,
-        bookId:  parsedBookId,
-        comment: comment.trim(),
-      });
-      try {
-        await request('/reviews', {
-          method:  'POST',
-          headers: buildHeaders(token),
-          body:    reviewBody,
-        });
-      } catch (revErr) {
-        console.warn('POST /reviews failed:', revErr);
-      }
-    }
+    // NOT: /ratings endpoint'i comment'i zaten kendi içinde Reviews tablosuna kaydediyor.
+    // Buradan ayrıca /reviews'a POST atmak duplicate yorum oluşturuyordu — kaldırıldı.
+
 
     // localStorage'a her zaman yaz (profil sayfası bunu okuyacak)
     let username = 'You';
