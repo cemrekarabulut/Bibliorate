@@ -158,10 +158,15 @@ public class AdminController : ControllerBase
     {
         string[] noisyKeywords = ["sparknotes", "notes", "sampler", "abridged", "summary"];
 
-        var noiseBooks = await _context.Books
+        // InMemory provider'ın kısıtlamaları nedeniyle önce listeyi çekip sonra filtreliyoruz.
+        // Admin işlemi olduğu için bellek kullanımı bu senaryoda kabul edilebilir.
+        var allBooks = await _context.Books.ToListAsync();
+        
+        var noiseBooks = allBooks
             .Where(b => noisyKeywords.Any(k => 
-                b.Title.ToLower().Contains(k) || (b.Author != null && b.Author.ToLower().Contains(k))))
-            .ToListAsync();
+                (b.Title != null && b.Title.ToLower().Contains(k)) || 
+                (b.Author != null && b.Author.ToLower().Contains(k))))
+            .ToList();
 
         if (noiseBooks.Count == 0)
         {
