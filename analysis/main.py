@@ -168,9 +168,10 @@ def genre_popularity():
     db = get_db()
     cur = db.cursor()
     cur.execute("""
-        SELECT Genre, COUNT(*) AS total
-        FROM Books
-        GROUP BY Genre
+        SELECT b.Genre, COUNT(v.ViewId) AS total
+        FROM BookViews v
+        JOIN Books b ON v.BookId = b.BookId
+        GROUP BY b.Genre
         ORDER BY total DESC
     """)
     rows = cur.fetchall()

@@ -24,7 +24,7 @@ public static class BookMappingExtensions
                             ? Math.Round(book.Ratings.Average(r => (double)r.Score), 1)
                             : 0.0);
         var finalRatingCount = ratingCount ?? (book.Ratings?.Count ?? 0);
-        var reviewCount = book.Reviews?.Count ?? 0;
+        var reviewCount = book.Reviews?.Count(r => !string.IsNullOrWhiteSpace(r.Comment)) ?? 0;
 
         return new BookDto
         {
