@@ -38,6 +38,8 @@ public class FavoriteRepository : IFavoriteRepository
             .Where(f => f.UserId == userId)
             .Include(f => f.Book)
                 .ThenInclude(b => b.Ratings)
+            .Include(f => f.Book)
+                .ThenInclude(b => b.Reviews)
             .ToListAsync();
     }
 
